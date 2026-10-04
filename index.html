@@ -204,6 +204,15 @@ select{font:inherit;font-size:14px;color:var(--fg);background:var(--sunk);border
 .btn{padding:11px 16px;border-radius:12px;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--surface)}
 .btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);flex:1}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;font-weight:500}
+/* sync status and save errors */
+.hr{display:flex;align-items:center;gap:10px}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--fg3);white-space:nowrap}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.sync.ok{color:var(--good)}
+.sync.wait{color:var(--warn)}
+.alert{position:fixed;left:16px;right:16px;max-width:448px;margin:0 auto;bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom,0px));z-index:29;display:flex;align-items:flex-start;gap:10px;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.35)}
+.alert p{margin:0;flex:1}
+.alert button{font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 /* sign-in */
 .signin{display:flex;flex-direction:column;gap:12px;padding:16px}
 .signin label{font-size:13px;font-weight:600;color:var(--fg2);margin-bottom:-6px}
@@ -214,7 +223,7 @@ select{font:inherit;font-size:14px;color:var(--fg);background:var(--sunk);border
 <body>
 
 <div class="app">
-  <header class="top"><h1 id="title">Tracker</h1><span class="eyebrow" id="topright"></span></header>
+  <header class="top"><h1 id="title">Tracker</h1><div class="hr"><span class="eyebrow" id="topright"></span><span class="sync" id="sync" role="status" hidden></span></div></header>
   <main id="view" class="view"></main>
 </div>
 
@@ -227,6 +236,7 @@ select{font:inherit;font-size:14px;color:var(--fg);background:var(--sunk);border
 
 <div class="scrim" id="scrim" hidden></div>
 <div class="toast" id="toast" hidden></div>
+<div class="alert" id="alert" role="alert" hidden><p id="alert-msg"></p><button type="button" id="alert-x">Dismiss</button></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <script type="module">
@@ -412,13 +422,53 @@ const GUIDE = [
    later never rewrites history. Annual fees are stored per card per year in S.fees. */
 const DATA_KEYS = ['off','anniv','rent','biltRate','fees','log'];
 let S = null, USER = null, userRef = null, unsub = null, snapTaken = false;
+const DEL = 'delete';   // pass as a value to save() to remove the field
 function blank(){ return {log:{}, off:{'csr-peloton':true}, anniv:{csr:5,bilt:null}, rent:1811, biltRate:0.5,
   fees:Object.fromEntries(CARDS.map(c=>[c.id,{...c.fee}]))}; }
 const pick = s => Object.fromEntries(DATA_KEYS.map(k=>[k,s[k]]));
-// Callers change S first, then save the one field they touched. Offline, the write is queued and syncs later.
+// Callers change S first, then save the one field they touched (path null replaces the whole doc).
+// Offline, the write is queued and syncs later.
 function save(path, value){
-  updateDoc(userRef, new FieldPath(...path), value).catch(err=>{ console.error(err); toast('Couldn’t save that change'); });
+  const op={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`, path, ...(value===DEL?{del:true}:{value})};
+  // a newer change to the same field supersedes the older one; replacing the doc supersedes everything
+  outbox = path ? outbox.filter(o=>o.path && o.path.join('\u0000')!==path.join('\u0000')) : [];
+  outbox.push(op); storeOutbox(); send(op);
 }
+
+/* ---------- outbox ----------
+   Every change is also kept in localStorage until the server confirms it, and replayed on every start.
+   Firestore's own offline queue normally covers this, but when the SDK is torn down mid-session
+   (see "page lifecycle" below) its unsent work is dropped. With the outbox, nothing is lost. */
+let outbox = [];
+const outboxKey = () => `card-credits-outbox-${USER.uid}`;
+function loadOutbox(){ try{ outbox = JSON.parse(localStorage.getItem(outboxKey())) || []; }catch(e){ outbox = []; } }
+function storeOutbox(){ try{ localStorage.setItem(outboxKey(), JSON.stringify(outbox)); }catch(e){} updateSync(); }
+function send(op){
+  const w = op.path ? updateDoc(userRef, new FieldPath(...op.path), op.del ? deleteField() : op.value) : setDoc(userRef, op.value);
+  w.then(()=>{ outbox = outbox.filter(o=>o.id!==op.id); storeOutbox(); })   // resolves once the server has it
+   .catch(err=>{ console.error(err); showError(`Couldn’t save a change (${err.code||err.message}). It’s kept on this device and will be sent again the next time the app opens.`); });
+}
+function applyOp(op){
+  if(!op.path){ S = Object.assign(blank(), op.value); return; }
+  let o=S; for(const k of op.path.slice(0,-1)) o = (o[k] && typeof o[k]==='object') ? o[k] : (o[k]={});
+  if(op.del) delete o[op.path.at(-1)]; else o[op.path.at(-1)] = op.value;
+}
+
+/* ---------- sync status ---------- */
+const sync = { pending:false, fromCache:true };
+function updateSync(){
+  const el=document.getElementById('sync');
+  if(!USER || !S){ el.hidden=true; return; }
+  const waiting = outbox.length>0 || sync.pending, online = navigator.onLine!==false;
+  el.hidden=false;
+  el.className = 'sync ' + (waiting ? 'wait' : sync.fromCache ? '' : 'ok');
+  el.textContent = waiting ? (online ? 'Waiting to sync' : 'Offline · waiting to sync') : sync.fromCache ? (online ? 'Connecting…' : 'Offline') : 'Saved';
+}
+addEventListener('online', ()=>updateSync()); addEventListener('offline', ()=>updateSync());
+
+/* ---------- save errors stay on screen until dismissed ---------- */
+function showError(msg){ document.getElementById('alert-msg').textContent=msg; document.getElementById('alert').hidden=false; }
+document.getElementById('alert-x').addEventListener('click',()=>{ document.getElementById('alert').hidden=true; });
 
 /* ---------- date helpers ---------- */
 const NOW = new Date();
@@ -571,7 +621,7 @@ function renderCardDetail(c){
   if(bsel) bsel.addEventListener('change',()=>{ S.biltRate=Number(bsel.value); save(['biltRate'],S.biltRate); render(); toast('Bilt Cash value updated'); });
   const rin=document.getElementById('rent-in');
   if(rin) rin.addEventListener('input',()=>{ const v=parseFloat(rin.value); S.rent = v>0?v:0; const r=S.rent; clearTimeout(rentT); rentT=setTimeout(()=>save(['rent'],r),400); document.getElementById('rent-out').innerHTML=rentRows(); });
-  view.querySelectorAll('[data-sw]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.sw; if(S.off[id]) delete S.off[id]; else S.off[id]=true; save(['off',id], S.off[id]?true:deleteField()); render(); }));
+  view.querySelectorAll('[data-sw]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.sw; if(S.off[id]) delete S.off[id]; else S.off[id]=true; save(['off',id], S.off[id]?true:DEL); render(); }));
   const sel=document.getElementById('anniv-'+c.id);
   if(sel) sel.addEventListener('change',()=>{ S.anniv[c.id]= sel.value?Number(sel.value):null; save(['anniv',c.id],S.anniv[c.id]); toast('Anniversary month saved'); });
   const fin=document.getElementById('fee-in');
@@ -666,7 +716,7 @@ function trow(c,y,m){
 function logYm(){ return ymStr(UI.ty,UI.tm); }
 function toggleCredit(id){
   const c=CREDITS.find(x=>x.id===id), y=UI.ty, m=UI.tm, k=`${c.id}|${periodKey(c,y,m)}`, e=S.log[k], a=e?.face ?? amtAt(c,y,m);
-  if(e && e.amt>=a){ delete S.log[k]; save(['log',k], deleteField()); }
+  if(e && e.amt>=a){ delete S.log[k]; save(['log',k], DEL); }
   else { S.log[k]=mkEntry(c,a,a,logYm()); save(['log',k], S.log[k]); }
   render();
 }
@@ -733,7 +783,7 @@ function openSheet(id){
   const close=hideModal;
   const commit=v=>{
     if(v>0){ S.log[k]=mkEntry(c,Math.min(v,a),a,e?e.ym:logYm()); save(['log',k], S.log[k]); }
-    else if(S.log[k]){ delete S.log[k]; save(['log',k], deleteField()); }
+    else if(S.log[k]){ delete S.log[k]; save(['log',k], DEL); }
     close(); render(); };
   document.getElementById('sh-full').onclick=()=>commit(a);
   const cl=document.getElementById('sh-clear'); if(cl) cl.onclick=()=>commit(0);
@@ -873,23 +923,30 @@ document.getElementById('importFile').addEventListener('change', async ev=>{
   try{ confirmImport(parseBackup(await f.text())); }catch(err){ toast(err.message); }
 });
 function confirmImport(b){
-  const n=Object.keys(b.data.log).length, cur=Object.keys(S.log).length;
+  const n=Object.keys(b.data.log).length, cur=Object.keys(S.log).length, missing=Object.keys(b.data.log).filter(k=>!(k in S.log));
   const when = b.at && !isNaN(b.at) ? ` from ${fmtDate(b.at)}${b.at.getFullYear()===today.y?', '+b.at.getFullYear():''}` : '';
   scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="im-t">
     <div class="grab"></div>
-    <div><div class="eyebrow">Import backup</div><h3 id="im-t">Replace your data?</h3></div>
-    <div class="how"><p>This backup${when} has ${n} check-off${n===1?'':'s'}. It replaces everything in the app now: ${cur} check-off${cur===1?'':'s'} and your settings. A copy of your current data is saved first.</p></div>
-    <div class="btns"><button class="btn" type="button" id="im-cancel">Cancel</button><button class="btn primary" type="button" id="im-go">Replace</button></div>
+    <div><div class="eyebrow">Import backup</div><h3 id="im-t">Add or replace?</h3></div>
+    <div class="how"><p>This backup${when} has ${n} check-off${n===1?'':'s'}, ${missing.length} of them not in the app now.</p>
+      <ul><li><b>Add missing check-offs</b> keeps everything you have and adds ${missing.length===1?'the one that’s missing':`the ${missing.length} that are missing`}. Settings don’t change.</li>
+      <li><b>Replace everything</b> swaps your ${cur} check-off${cur===1?'':'s'} and settings for the backup. A copy of your current data is saved first.</li></ul></div>
+    <div class="btns"><button class="btn primary" type="button" id="im-add" ${missing.length?'':'disabled'}>Add missing check-offs</button></div>
+    <div class="btns"><button class="btn" type="button" id="im-cancel">Cancel</button><button class="btn" type="button" id="im-go" style="flex:1">Replace everything</button></div>
   </div>`;
   showModal();
   document.getElementById('im-cancel').onclick=hideModal;
   scrim.onclick=ev=>{ if(ev.target===scrim) hideModal(); };
+  document.getElementById('im-add').onclick=()=>{
+    for(const k of missing){ S.log[k]=b.data.log[k]; save(['log',k], S.log[k]); }
+    hideModal(); render(); toast(`Added ${missing.length} check-off${missing.length===1?'':'s'}`);
+  };
   document.getElementById('im-go').onclick=()=>{
-    const batch=writeBatch(db), stamp=new Date().toISOString().slice(0,19).replace(/:/g,'-');
-    batch.set(doc(userRef,'snapshots',`before-import-${stamp}`), {...pick(S), takenAt:serverTimestamp()});
-    batch.set(userRef, {...b.data, ...(S.lastSnapshot?{lastSnapshot:S.lastSnapshot}:{})});
-    batch.commit().catch(err=>{ console.error(err); toast('Couldn’t import that backup'); });
-    S={...b.data, lastSnapshot:S.lastSnapshot};
+    const stamp=new Date().toISOString().slice(0,19).replace(/:/g,'-');
+    setDoc(doc(userRef,'snapshots',`before-import-${stamp}`), {...pick(S), takenAt:serverTimestamp()})
+      .catch(err=>{ console.error(err); showError(`Couldn’t save the copy of your data before importing (${err.code||err.message}).`); });
+    const next={...b.data, ...(S.lastSnapshot?{lastSnapshot:S.lastSnapshot}:{})};
+    S={...next}; save(null, next);
     hideModal(); render(); toast('Backup imported');
   };
 }
@@ -903,7 +960,7 @@ function monthlySnapshot(){
   const batch=writeBatch(db);
   batch.set(doc(userRef,'snapshots',ym), {...pick(S), takenAt:serverTimestamp()});
   batch.update(userRef, {lastSnapshot:ym});
-  batch.commit().catch(err=>console.error('Monthly snapshot failed', err));
+  batch.commit().catch(err=>{ console.error('Monthly snapshot failed', err); showError(`Couldn’t save this month’s automatic snapshot (${err.code||err.message}). It will try again next time.`); });
 }
 // Store this year's fee explicitly (carried over from the latest year on file), so changing it later never touches past years
 function ensureFees(){
@@ -975,19 +1032,29 @@ function refresh(){
   render();
 }
 function subscribe(uid){
-  userRef=doc(db,'users',uid);
-  unsub=onSnapshot(userRef, snap=>{
+  userRef=doc(db,'users',uid); loadOutbox();
+  let last='', stale=false;   // stale: data changed while our own writes were pending, re-render once they settle
+  unsub=onSnapshot(userRef, {includeMetadataChanges:true}, snap=>{
+    sync.pending=snap.metadata.hasPendingWrites; sync.fromCache=snap.metadata.fromCache;
     if(!snap.exists()){
       if(snap.metadata.fromCache) return;   // could be a new device that's offline; wait for the server before creating anything
       setDoc(userRef, blank()).catch(err=>{ console.error(err); showMessage('Couldn’t create your data. Check the Firestore rules in the README.'); });
       return;
     }
-    const first=!S;
-    S=Object.assign(blank(), snap.data());
+    const json=JSON.stringify(snap.data()), first=!S, changed=json!==last; last=json;
+    if(changed || first){
+      S=Object.assign(blank(), JSON.parse(json));
+      outbox.forEach(applyOp);   // changes the server hasn't confirmed yet always show
+    }
     if(first){
+      outbox.forEach(send);      // replay anything left over from an earlier session
       ensureFees(); monthlySnapshot(); nav.hidden=false;
-      const start=(location.hash||'').slice(1); setTab(tabs.includes(start)?start:'tracker');
-    } else if(!snap.metadata.hasPendingWrites) refresh();
+      restoreUi() || setTab(tabs.includes((location.hash||'').slice(1)) ? location.hash.slice(1) : 'tracker');
+    } else {
+      stale = stale || changed;
+      if(stale && !snap.metadata.hasPendingWrites){ stale=false; refresh(); }
+    }
+    updateSync();
   }, err=>{ console.error(err); showMessage(err.code==='permission-denied' ? 'Firestore refused access. Check that the security rules have your user ID (see the README).' : 'Couldn’t load your data. Try again in a moment.'); });
 }
 async function doSignOut(){
@@ -998,11 +1065,37 @@ async function doSignOut(){
 }
 onAuthStateChanged(auth, user=>{
   if(unsub){ unsub(); unsub=null; }
-  USER=user; S=null; snapTaken=false; hideModalIfOpen();
+  USER=user; S=null; snapTaken=false; hideModalIfOpen(); updateSync();
   if(!user){ showSignIn(); return; }
   nav.hidden=true; showMessage('Loading your credits…'); subscribe(user.uid);
 });
 function hideModalIfOpen(){ if(!scrim.hidden) hideModal(); }
+
+/* ---------- page lifecycle ----------
+   Firestore shuts itself down on 'pagehide', expecting the page to be going away. On iPhone it also
+   takes the user agent's fixed "Mobile/15E148" for Safari 14-16 and stops running any further work.
+   iOS home-screen apps can fire pagehide and later resume the same page, which leaves a dead Firestore
+   that drops writes without an error. So after a pagehide, the next time the page is shown we reload it.
+   The outbox and the saved screen position make the reload lossless. */
+const UI_KEY='card-credits-ui';
+let pageHidden=false;
+addEventListener('pagehide', ()=>{
+  pageHidden=true;
+  try{ sessionStorage.setItem(UI_KEY, JSON.stringify({tab:UI.tab, cardDetail:UI.cardDetail, ty:UI.ty, tm:UI.tm, filter:UI.filter, vy:UI.vy, y:scrollY})); }catch(e){}
+});
+function revive(){ if(pageHidden && document.visibilityState==='visible'){ pageHidden=false; location.reload(); } }
+addEventListener('pageshow', revive);
+document.addEventListener('visibilitychange', revive);
+// Put the screen back the way it was before a reload
+function restoreUi(){
+  let u; try{ u=JSON.parse(sessionStorage.getItem(UI_KEY)); sessionStorage.removeItem(UI_KEY); }catch(e){}
+  if(!u || !tabs.includes(u.tab)) return false;
+  Object.assign(UI, {ty:u.ty, tm:u.tm, filter:u.filter, vy:u.vy});
+  setTab(u.tab);
+  if(u.cardDetail && CARD[u.cardDetail]){ UI.cardDetail=u.cardDetail; render(); }
+  window.scrollTo(0, u.y||0);
+  return true;
+}
 showMessage('Loading…');
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(err=>console.error('Service worker failed', err));
