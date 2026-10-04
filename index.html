@@ -213,6 +213,11 @@ select{font:inherit;font-size:14px;color:var(--fg);background:var(--sunk);border
 .alert{position:fixed;left:16px;right:16px;max-width:448px;margin:0 auto;bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom,0px));z-index:29;display:flex;align-items:flex-start;gap:10px;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.35)}
 .alert p{margin:0;flex:1}
 .alert button{font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+/* haptics: transparent label laid over each button (see "haptics" in the script) */
+button:has(> label.hap){position:relative}
+label.hap{position:absolute;inset:0;z-index:1;border-radius:inherit;-webkit-user-select:none;user-select:none}
+label.hap > input{position:absolute;left:0;top:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+button:disabled > label.hap{display:none}
 /* sign-in */
 .signin{display:flex;flex-direction:column;gap:12px;padding:16px}
 .signin label{font-size:13px;font-weight:600;color:var(--fg2);margin-bottom:-6px}
@@ -575,6 +580,10 @@ function renderCards(){
       <div class="field" style="border-top:1px solid var(--line)"><div>Calendar reminders<small>The 25th of every month, plus June 1 and December 1 for the six-month credits</small></div></div>
       <div class="btns" style="padding:0 16px 14px"><button class="btn" type="button" id="ics">Download calendar file</button></div>
       <div class="field" style="border-top:1px solid var(--line)"><div>Signed in<small>${esc(USER.email||'')}</small></div><button class="btn" type="button" id="out">Sign out</button></div>
+    </section>
+    <section class="panel">
+      <div class="ptitle"><h2>Haptics test</h2><span class="sub">Temporary</span></div>
+      <div class="field"><div>Tap the button and feel for a light tick<small id="haptic-diag">${hapticDiag()}</small><small>No tick? Check Settings › Sounds &amp; Haptics › System Haptics.</small></div><button class="btn" type="button" id="haptic-try">Test haptic</button></div>
     </section>`;
   view.querySelectorAll('[data-card]').forEach(b=>b.addEventListener('click',()=>{UI.cardDetail=b.dataset.card; render(); window.scrollTo(0,0);}));
   document.getElementById('exp').addEventListener('click',exportBackup);
@@ -888,27 +897,69 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !scrim.hidden) hideModal(); });
 
 /* ---------- haptics ----------
-   Safari has no navigator.vibrate, but iOS 18+ plays a light tick when an <input type="checkbox" switch>
-   is toggled. So one tap on anything that performs an action toggles a hidden one. These two listeners
-   cover every button, switch and dropdown, including ones added later. Only real taps count (isTrusted),
-   so programmatic clicks, typing and changes from another device never tick. The hidden switch is
-   display:none, so it can't take focus or scroll anything; elsewhere the toggle simply does nothing. */
-const TAPPABLE = 'button, [role="button"], [role="switch"], input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"]';
-function tick(){
-  if(!(navigator.maxTouchPoints > 0)) return;   // desktop: nothing to feel
+   Safari has no navigator.vibrate, but iOS 18+ plays a light tick when a real tap toggles an
+   <input type="checkbox" switch>. Since WebKit commit fc1ef83 (May 2026), a click() from JavaScript,
+   even on a label, reaches the switch as an untrusted click and plays nothing. So the tap itself has to
+   land on a label for the switch: every button gets a transparent label laid over it, with its own
+   switch inside. The finger lands on the label, the click still bubbles to the button so its handlers
+   run as before, and then WebKit forwards a trusted click to the switch, which ticks. The switch is
+   nested rather than linked with for="…" because many handlers re-render, which detaches the label
+   before that forwarding step, and a detached label can only find a control inside itself. The switch
+   is visually hidden (not display:none) and inert, so it never takes focus. A MutationObserver covers
+   every button, including future ones. Dropdowns can't be covered (a label over a <select> stops it
+   opening), so they don't tick. Only touch devices get the overlay; elsewhere nothing changes. */
+const HAPTIC_HOSTS = 'button, [role="button"], [role="switch"]';
+function addHaptics(root){
+  const hosts = root.matches(HAPTIC_HOSTS) ? [root] : [];
+  hosts.push(...root.querySelectorAll(HAPTIC_HOSTS));
+  for(const b of hosts){
+    if(b.querySelector(':scope > label.hap')) continue;
+    const l=document.createElement('label'), sw=document.createElement('input');
+    l.className='hap'; l.setAttribute('aria-hidden','true');
+    sw.type='checkbox'; sw.setAttribute('switch',''); sw.tabIndex=-1; sw.setAttribute('inert','');
+    sw.addEventListener('click', onHapticSwitch);
+    l.appendChild(sw); b.appendChild(l);
+  }
+}
+if(navigator.maxTouchPoints > 0){
   try{
-    const had=document.activeElement, label=document.createElement('label'), sw=document.createElement('input');
-    label.setAttribute('aria-hidden','true'); label.style.display='none';
-    sw.type='checkbox'; sw.setAttribute('switch',''); label.appendChild(sw);
-    document.head.appendChild(label); label.click(); label.remove();
-    if(document.activeElement!==had && had && had.isConnected) had.focus({preventScroll:true});
+    addHaptics(document.body);
+    new MutationObserver(ms=>{
+      try{
+        for(const m of ms){
+          const host = m.target.nodeType===1 && m.target.closest(HAPTIC_HOSTS);
+          if(host) addHaptics(host);   // e.g. a button whose text was replaced
+          for(const n of m.addedNodes) if(n.nodeType===1) addHaptics(n);
+        }
+      }catch(e){}
+    }).observe(document.body, {childList:true, subtree:true});
   }catch(e){}
 }
+// The click the label forwards to its switch would bubble back up to the button and run its handlers a
+// second time. Stop it at the switch; the tick has already played by the time listeners run.
+function onHapticSwitch(e){
+  e.stopPropagation();
+  hapticSeen(e);   // TEMPORARY: test panel counter
+}
+// With the tap landing on the label, the label is what the browser "activates", so a submit button
+// wouldn't submit its form on its own. Do that here (the click handlers have already run).
 document.addEventListener('click', e=>{
-  const el = e.isTrusted && e.target.closest && e.target.closest(TAPPABLE);
-  if(el && !el.disabled && el.getAttribute('aria-disabled')!=='true') tick();
-}, true);
-document.addEventListener('change', e=>{ if(e.isTrusted && e.target.tagName==='SELECT') tick(); }, true);
+  const l=e.target;
+  if(!(l instanceof HTMLLabelElement) || !l.classList.contains('hap') || e.defaultPrevented) return;
+  const b=l.parentElement;
+  if(b.type==='submit' && b.form) b.form.requestSubmit(b);
+});
+
+/* ---------- TEMPORARY: haptics test panel on the Cards tab (remove once confirmed) ---------- */
+const hapticStats = {taps:0, trusted:0};
+function hapticSeen(e){
+  hapticStats.taps++; if(e.isTrusted) hapticStats.trusted++;
+  const d=document.getElementById('haptic-diag'); if(d) d.textContent=hapticDiag();
+}
+function hapticDiag(){
+  const sw = 'switch' in HTMLInputElement.prototype;
+  return `Switch control: ${sw?'supported':'not supported (needs iOS 18 or later)'} · Taps that reached it: ${hapticStats.trusted} trusted of ${hapticStats.taps}`;
+}
 
 function download(name, text, type){
   const url=URL.createObjectURL(new Blob([text],{type})), a=document.createElement('a');
