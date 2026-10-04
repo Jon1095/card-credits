@@ -580,10 +580,6 @@ function renderCards(){
       <div class="field" style="border-top:1px solid var(--line)"><div>Calendar reminders<small>The 25th of every month, plus June 1 and December 1 for the six-month credits</small></div></div>
       <div class="btns" style="padding:0 16px 14px"><button class="btn" type="button" id="ics">Download calendar file</button></div>
       <div class="field" style="border-top:1px solid var(--line)"><div>Signed in<small>${esc(USER.email||'')}</small></div><button class="btn" type="button" id="out">Sign out</button></div>
-    </section>
-    <section class="panel">
-      <div class="ptitle"><h2>Haptics test</h2><span class="sub">Temporary</span></div>
-      <div class="field"><div>Tap the button and feel for a light tick<small id="haptic-diag">${hapticDiag()}</small><small>No tick? Check Settings › Sounds &amp; Haptics › System Haptics.</small></div><button class="btn" type="button" id="haptic-try">Test haptic</button></div>
     </section>`;
   view.querySelectorAll('[data-card]').forEach(b=>b.addEventListener('click',()=>{UI.cardDetail=b.dataset.card; render(); window.scrollTo(0,0);}));
   document.getElementById('exp').addEventListener('click',exportBackup);
@@ -937,10 +933,7 @@ if(navigator.maxTouchPoints > 0){
 }
 // The click the label forwards to its switch would bubble back up to the button and run its handlers a
 // second time. Stop it at the switch; the tick has already played by the time listeners run.
-function onHapticSwitch(e){
-  e.stopPropagation();
-  hapticSeen(e);   // TEMPORARY: test panel counter
-}
+function onHapticSwitch(e){ e.stopPropagation(); }
 // With the tap landing on the label, the label is what the browser "activates", so a submit button
 // wouldn't submit its form on its own. Do that here (the click handlers have already run).
 document.addEventListener('click', e=>{
@@ -949,17 +942,6 @@ document.addEventListener('click', e=>{
   const b=l.parentElement;
   if(b.type==='submit' && b.form) b.form.requestSubmit(b);
 });
-
-/* ---------- TEMPORARY: haptics test panel on the Cards tab (remove once confirmed) ---------- */
-const hapticStats = {taps:0, trusted:0};
-function hapticSeen(e){
-  hapticStats.taps++; if(e.isTrusted) hapticStats.trusted++;
-  const d=document.getElementById('haptic-diag'); if(d) d.textContent=hapticDiag();
-}
-function hapticDiag(){
-  const sw = 'switch' in HTMLInputElement.prototype;
-  return `Switch control: ${sw?'supported':'not supported (needs iOS 18 or later)'} · Taps that reached it: ${hapticStats.trusted} trusted of ${hapticStats.taps}`;
-}
 
 function download(name, text, type){
   const url=URL.createObjectURL(new Blob([text],{type})), a=document.createElement('a');
