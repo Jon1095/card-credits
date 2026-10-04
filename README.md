@@ -81,14 +81,34 @@ Everything is in Firestore under your user ID:
 
 Each check-off stores its own copy of what it was worth: `amt` (dollars used), `face` (the credit's full amount that period) and `card`. Past months and the Value tab read these stored numbers. If you edit a credit's amount in `index.html` later, your history doesn't change.
 
+Every change is also kept on the device (in localStorage) until the server confirms it, and re-sent each time the app starts. Firestore has its own offline queue, but on iPhone the SDK can shut itself down while the app is still open (see below). The device copy means a change can't be lost that way.
+
 Annual fees are stored per year. The fee field on each card page sets this year's fee only. Each new year starts with last year's fee, which you can then change. Past years keep their own fee.
 
 Bilt Cash is the one exception. The Value tab still counts it at the rate you choose on the Palladium page, as the prototype did, so changing that rate revalues past Bilt Cash too. The Bilt Cash dollar amounts themselves are stored with each check-off.
 
+## Sync status
+
+The header shows where your changes are:
+
+- **Saved**: the server has everything.
+- **Waiting to sync**: at least one change hasn't reached the server yet. With no signal it says **Offline · waiting to sync** and catches up when you're back online.
+- **Connecting…** / **Offline**: nothing is waiting, but the app hasn't reached the server yet.
+
+If a save fails, for example because the security rules reject it, a banner explains why and stays until you tap **Dismiss**. The change stays on the device and is sent again the next time the app opens.
+
+### Why the app sometimes reloads when you come back to it
+
+Firestore shuts itself down when the browser fires `pagehide`. On iPhone it also misreads every iPhone's user agent (`Mobile/15E148`) as Safari 14–16 and stops running any further work. A home-screen app can fire `pagehide` and then resume the same page. Before this fix, that left a Firestore that dropped writes without an error. Check-offs showed on the phone but never reached the server.
+
+Now, if `pagehide` has fired, the app reloads the next time it's shown. It comes back on the same tab, month and scroll position, and the device copy re-sends anything that was waiting.
+
 ## Backups
 
 - **Export backup** on the Cards tab downloads a JSON file with all your settings and check-offs.
-- **Import backup** replaces everything with a backup file. It asks you to confirm first and saves a copy of your current data before replacing anything.
+- **Import backup** gives you two choices:
+  - **Add missing check-offs** adds only the check-offs the app doesn't already have. It keeps everything else, including your settings. Use this to bring in check-offs from another device.
+  - **Replace everything** swaps all your data for the backup. It saves a copy of your current data first.
 - Monthly snapshots happen automatically. To restore one, open it in the Firestore console's **Data** tab and copy its fields back into `users/{uid}`.
 
 ## Making changes
