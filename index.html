@@ -887,6 +887,29 @@ let tt;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,1800); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !scrim.hidden) hideModal(); });
 
+/* ---------- haptics ----------
+   Safari has no navigator.vibrate, but iOS 18+ plays a light tick when an <input type="checkbox" switch>
+   is toggled. So one tap on anything that performs an action toggles a hidden one. These two listeners
+   cover every button, switch and dropdown, including ones added later. Only real taps count (isTrusted),
+   so programmatic clicks, typing and changes from another device never tick. The hidden switch is
+   display:none, so it can't take focus or scroll anything; elsewhere the toggle simply does nothing. */
+const TAPPABLE = 'button, [role="button"], [role="switch"], input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"]';
+function tick(){
+  if(!(navigator.maxTouchPoints > 0)) return;   // desktop: nothing to feel
+  try{
+    const had=document.activeElement, label=document.createElement('label'), sw=document.createElement('input');
+    label.setAttribute('aria-hidden','true'); label.style.display='none';
+    sw.type='checkbox'; sw.setAttribute('switch',''); label.appendChild(sw);
+    document.head.appendChild(label); label.click(); label.remove();
+    if(document.activeElement!==had && had && had.isConnected) had.focus({preventScroll:true});
+  }catch(e){}
+}
+document.addEventListener('click', e=>{
+  const el = e.isTrusted && e.target.closest && e.target.closest(TAPPABLE);
+  if(el && !el.disabled && el.getAttribute('aria-disabled')!=='true') tick();
+}, true);
+document.addEventListener('change', e=>{ if(e.isTrusted && e.target.tagName==='SELECT') tick(); }, true);
+
 function download(name, text, type){
   const url=URL.createObjectURL(new Blob([text],{type})), a=document.createElement('a');
   a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
