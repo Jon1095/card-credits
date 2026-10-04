@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Credits</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Credits">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15181d" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: phone-first app shell — sticky title bar, one scrolling view, fixed bottom tab bar; centered 480px column on desktop */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --sunk:#eceef2; --line:#dde1e7;
+  --fg:#16191f; --fg2:#4d5562; --fg3:#7a8290;
+  --ink:#1d2533;            /* UI accent: ink, so the three card colors carry all the hue */
+  --csr:#2f5aa8; --gold:#b07d1e; --bilt:#008f84;
+  --good:#1f7a45; --good-bg:#e3f2e8; --warn:#9a5b00; --warn-bg:#fbefd9;
+  --font-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body:"Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-num:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:14px; --tabh:64px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15181d; --surface:#1d2128; --sunk:#252a33; --line:#2f3540;
+  --fg:#eef0f4; --fg2:#b3b9c4; --fg3:#858d9a; --ink:#e4e8ef;
+  --csr:#5584d4; --gold:#bb8a2a; --bilt:#22a199;
+  --good:#5cc489; --good-bg:#1c3326; --warn:#e6a447; --warn-bg:#3a2d17;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181d; --surface:#1d2128; --sunk:#252a33; --line:#2f3540;
+  --fg:#eef0f4; --fg2:#b3b9c4; --fg3:#858d9a; --ink:#e4e8ef;
+  --csr:#5584d4; --gold:#bb8a2a; --bilt:#22a199;
+  --good:#5cc489; --good-bg:#1c3326; --warn:#e6a447; --warn-bg:#3a2d17;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body.locked{position:fixed;left:0;right:0;overflow:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.app{max-width:480px;margin:0 auto;padding-inline:16px;padding-block:env(safe-area-inset-top,0px) calc(var(--tabh) + 24px + env(safe-area-inset-bottom,0px))}
+/* home-screen app runs under the status bar (black-translucent); this strip keeps it on the page background */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:6}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header.top h1{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--fg3)}
+.view{display:flex;flex-direction:column;gap:18px}
+/* tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .inner{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--tabh)}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--fg3)}
+nav.tabs button[aria-current="page"]{color:var(--fg)}
+nav.tabs svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* card art */
+.cardimg{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:1.586;object-fit:cover;border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px -12px rgba(0,0,0,.35)}
+.cardart{position:relative;aspect-ratio:1.586;max-width:100%;border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px -12px rgba(0,0,0,.35)}
+.cardart::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.18) 45%,transparent 60%);pointer-events:none}
+.cardart.csr{background:radial-gradient(120% 90% at 85% 10%,#3a5f9e 0%,#1b2f55 45%,#0e1a33 100%)}
+.cardart.gold{background:linear-gradient(135deg,#e9c97a 0%,#c99a3e 40%,#a77a25 70%,#d8b25f 100%);color:#2a1d05}
+.cardart.bilt{background:linear-gradient(135deg,#f2f4f6 0%,#b7bec6 28%,#eef1f4 52%,#9aa3ad 78%,#dfe3e8 100%);color:#161a20}
+.cardart .issuer{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+.cardart .cname{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.01em;line-height:1.1}
+.cardart .chip{width:38px;height:28px;border-radius:6px;background:linear-gradient(135deg,#efd9a0,#b8944b);opacity:.9}
+.cardart .net{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.cardart .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.cardlist{display:flex;flex-direction:column;gap:14px}
+.cardtile{display:flex;flex-direction:column;gap:8px;text-align:left}
+.cardtile .meta{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--fg2);padding-inline:4px}
+.cardtile .meta b{color:var(--fg);font-weight:600}
+/* generic panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ptitle{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 16px 6px}
+.ptitle h2,.ptitle h3{margin:0;font-size:15px;font-weight:600}
+.ptitle .sub{font-size:13px;color:var(--fg3);text-align:right}
+.back{display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:15px;color:var(--fg2)}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.stat .k{font-size:12px;color:var(--fg3)}
+.stat .v{font-size:18px;font-weight:500}
+/* rows */
+.rows{list-style:none;margin:0;padding:0}
+.rows li{border-top:1px solid var(--line)}
+.rows li:first-child{border-top:0}
+.erow{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;padding:10px 16px}
+.erow .x{font-family:var(--font-display);font-weight:700;font-size:24px;line-height:1}
+.erow .d{font-size:14px;min-width:0}
+.erow .d small{display:block;color:var(--fg3);font-size:12.5px}
+.crow{display:flex;align-items:center;gap:8px;padding:10px 16px}
+.crow .d{flex:1;min-width:0}
+.crow .d .n{font-size:14.5px}
+.crow .d small{display:block;color:var(--fg3);font-size:12.5px}
+.crow .amt{font-size:14px;color:var(--fg2)}
+.crow.off .d,.crow.off .amt{opacity:.45}
+.perk{padding:10px 16px;font-size:14px}
+.perk.muted{color:var(--fg3)}
+.ibtn{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;color:var(--fg3)}
+.ibtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.ibtn .dotfill{fill:currentColor;stroke:currentColor}
+.ibtn:hover{color:var(--fg)}
+.how p{margin:0}
+.how ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.perk small{display:block;color:var(--fg3);font-size:12.5px}
+.switch{position:relative;width:44px;height:26px;border-radius:13px;background:var(--sunk);border:1px solid var(--line);flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.switch[aria-checked="true"]::after{transform:translateX(18px)}
+.field{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;font-size:14px}
+.field small{display:block;color:var(--fg3);font-size:12.5px}
+select{font:inherit;font-size:14px;color:var(--fg);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+/* tracker */
+.monthbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.monthbar .m{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.iconbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);font-size:18px}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:600;color:var(--fg2)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.trow{display:flex;align-items:center;gap:8px;padding:8px 6px 8px 8px}
+.check{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%}
+.check .ring{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;transition:background .12s,border-color .12s}
+.check .ring svg{width:15px;height:15px;stroke:#fff;stroke-width:3;fill:none;opacity:0}
+.trow.done .check .ring{background:var(--c);border-color:var(--c)}
+.trow.done .check .ring svg{opacity:1}
+.trow.part .check .ring{border-color:var(--c);background:conic-gradient(var(--c) var(--p),transparent 0)}
+.trow .body{flex:1;min-width:0;text-align:left;display:flex;align-items:center;gap:10px;padding-block:4px}
+.trow .body .t{flex:1;min-width:0}
+.trow .body .n{font-size:14.5px;line-height:1.3}
+.trow.done .body .n{color:var(--fg2)}
+.trow .body small{display:block;font-size:12.5px;color:var(--fg3)}
+.trow .body small.soon{color:var(--warn);font-weight:600}
+.trow .a{font-size:14px;text-align:right;white-space:nowrap}
+.trow .a .of{color:var(--fg3)}
+.prog{height:4px;border-radius:2px;background:var(--sunk);margin:2px 16px 12px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ink);border-radius:2px}
+.empty{padding:14px 16px;color:var(--fg3);font-size:14px}
+/* guide */
+.note{font-size:13.5px;color:var(--fg2);max-width:62ch}
+.grow{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.grow .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.grow .cat{font-weight:600;font-size:15px}
+.grow .cat small{display:block;font-weight:400;color:var(--fg3);font-size:12.5px}
+.winner{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line));font-size:13px;font-weight:600;white-space:nowrap}
+.winner .x{font-family:var(--font-num)}
+.rates{display:flex;gap:6px;flex-wrap:wrap}
+.rate{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg2);background:var(--sunk);border-radius:6px;padding:3px 8px}
+.rate.best{color:var(--fg);font-weight:600}
+.rate.na{color:var(--fg3)}
+.tip{font-size:12.5px;color:var(--fg2)}
+.search{width:100%;font:inherit;font-size:15px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+/* value */
+.hero{display:flex;flex-direction:column;gap:4px}
+.hero .big{font-family:var(--font-display);font-weight:700;font-size:40px;letter-spacing:-.02em;line-height:1.05}
+.hero .vs{color:var(--fg2);font-size:15px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.vcard{display:flex;flex-direction:column;gap:10px;padding:14px 16px;text-align:left;width:100%}
+.vcard .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.vcard .name{display:flex;align-items:center;gap:8px;font-weight:600}
+.vbar{position:relative;height:12px;border-radius:6px;background:var(--sunk)}
+.vbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--c)}
+.vbar .fee{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);border-radius:1px}
+.vline{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--fg2)}
+.vline b{color:var(--fg);font-weight:500}
+.breakdown{border-top:1px solid var(--line);padding:6px 0}
+.brow{display:flex;justify-content:space-between;gap:10px;padding:6px 16px;font-size:13.5px}
+.brow .of{color:var(--fg3)}
+.brow.zero .l{color:var(--fg3)}
+.chart{padding:8px 10px 12px}
+.bars{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;height:160px;align-items:end;border-bottom:1px solid var(--line)}
+.gridline{position:absolute;left:0;right:0;border-top:1px dashed var(--line);pointer-events:none}
+.gridline span{position:absolute;right:0;top:-16px;font-size:11px;color:var(--fg3);background:var(--surface);padding-left:4px}
+.bar{position:relative;height:100%;display:flex;flex-direction:column-reverse;gap:2px;cursor:pointer;justify-content:flex-start}
+.bar i{display:block;background:var(--c);width:100%}
+.bar i:last-child{border-radius:4px 4px 0 0}
+.bar.future{cursor:default}
+.mlabels{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;margin-top:6px;font-size:10.5px;letter-spacing:-.01em;white-space:nowrap;color:var(--fg3);text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg2);padding:0 16px 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tooltip{margin:4px 16px 12px;padding:10px 12px;border-radius:10px;background:var(--sunk);font-size:13px;min-height:42px}
+.tooltip .tl{display:flex;justify-content:space-between;gap:8px}
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:20;overscroll-behavior:contain;touch-action:none;background:rgba(10,12,16,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{touch-action:pan-y;overscroll-behavior:contain;width:100%;max-width:480px;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:85vh;overflow:auto}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);align-self:center}
+.sheet h3{margin:0;font-family:var(--font-display);font-size:20px;font-weight:700;letter-spacing:-.01em}
+.sheet .how{font-size:14px;color:var(--fg2);background:var(--sunk);border-radius:10px;padding:10px 12px}
+.amtin{display:flex;align-items:center;gap:8px;font-size:15px}
+.amtin input{width:110px;font-family:var(--font-num);font-size:18px;color:var(--fg);background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:11px 16px;border-radius:12px;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--surface)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);flex:1}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;font-weight:500}
+/* sign-in */
+.signin{display:flex;flex-direction:column;gap:12px;padding:16px}
+.signin label{font-size:13px;font-weight:600;color:var(--fg2);margin-bottom:-6px}
+.err{color:var(--warn);font-size:13.5px;margin:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top"><h1 id="title">Tracker</h1><span class="eyebrow" id="topright"></span></header>
+  <main id="view" class="view"></main>
+</div>
+
+<nav class="tabs" aria-label="Sections" hidden><div class="inner">
+  <button type="button" data-tab="cards"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>Cards</button>
+  <button type="button" data-tab="tracker"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2"/><circle cx="6" cy="17" r="2"/><path d="M5 7l.8.8L7.3 6.3M11 7h9M11 17h9M11 12h9"/></svg>Tracker</button>
+  <button type="button" data-tab="guide"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Best card</button>
+  <button type="button" data-tab="value"><svg viewBox="0 0 24 24"><path d="M12 4v16M5 20h14M4 9l3-5 3 5a3 3 0 0 1-6 0zM14 9l3-5 3 5a3 3 0 0 1-6 0zM7 4h10"/></svg>Value</button>
+</div></nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script type="module">
+/* ---------- firebase ---------- */
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, updateDoc, writeBatch,
+  deleteField, FieldPath, serverTimestamp, terminate, clearIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+const firebaseConfig = {
+  apiKey: "AIzaSyBzbzpEuzzHFLi5aWoHkwWoUebtF7b4Paw",
+  authDomain: "card-credits.firebaseapp.com",
+  projectId: "card-credits",
+  storageBucket: "card-credits.firebasestorage.app",
+  messagingSenderId: "491510342284",
+  appId: "1:491510342284:web:119eda36bd93ec4711d1a9"
+};
+const fb = initializeApp(firebaseConfig);
+const auth = getAuth(fb);
+// Offline persistence: data is cached in IndexedDB, and changes made without signal sync when it returns
+const db = initializeFirestore(fb, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+
+/* ---------- data (as of late Sept 2026; everything is editable later) ---------- */
+const CARDS = [
+  { id:'csr', name:'Sapphire Reserve', issuer:'Chase', network:'Visa Infinite', fee:{2026:795}, anniv:true,
+    points:'Ultimate Rewards points',
+    earn:[
+      {x:8, t:'Chase Travel, including The Edit'},
+      {x:5, t:'Lyft rides'},
+      {x:4, t:'Flights and hotels booked direct'},
+      {x:3, t:'Dining worldwide', s:'Includes takeout and eligible delivery'},
+      {x:1, t:'Everything else'} ],
+    perks:[
+      {g:'Lounges', items:[
+        {t:'Priority Pass Select', s:'Unlimited visits for you, plus two guests'},
+        {t:'Chase Sapphire Lounges by The Club', s:'You plus two guests'} ]},
+      {g:'Travel protection', items:[
+        {t:'Trip cancellation and interruption', s:'Up to $10,000 per person and $20,000 per trip for prepaid, nonrefundable costs. Covers illness, injury, severe weather and more.'},
+        {t:'Trip delay', s:'Up to $500 per ticket for meals and lodging when a delay runs 6 hours or more'},
+        {t:'Baggage delay', s:'Up to $100 a day for 5 days for essentials when bags are 6+ hours late'},
+        {t:'Lost or damaged luggage', s:'Up to $3,000 per person for checked and carry-on bags ($2,000 for New York residents)'},
+        {t:'Primary rental car coverage', s:'Up to $75,000 for theft or collision. Decline the rental company’s damage waiver.'},
+        {t:'Emergency evacuation and transportation', s:'Up to $100,000'},
+        {t:'Emergency medical and dental', s:'Up to $2,500 while traveling, $50 deductible'},
+        {t:'Travel accident insurance', s:'Up to $1,000,000 on common carriers'},
+        {t:'Roadside assistance', s:'Up to $50 per event, four times a year'} ]},
+      {g:'Purchase protection', items:[
+        {t:'Purchase protection', s:'Damage or theft within 120 days of purchase, up to $10,000 per claim and $50,000 a year'},
+        {t:'Extended warranty', s:'Adds one year to manufacturer warranties of three years or less'},
+        {t:'Return protection', s:'Up to $500 per item and $1,000 a year when a store won’t take a return within 90 days'} ]},
+      {g:'Everyday', items:[
+        {t:'No foreign transaction fees'},
+        {t:'Global Entry, TSA PreCheck or NEXUS fee credit', s:'Once every four years'},
+        {t:'DashPass membership', s:'Activate it to get the DoorDash promos'} ]} ] },
+  { id:'gold', name:'Gold Card', issuer:'American Express', network:'Amex', fee:{2026:325}, anniv:false,
+    points:'Membership Rewards points',
+    earn:[
+      {x:5, t:'Prepaid hotels through Amex Travel'},
+      {x:4, t:'Restaurants worldwide', s:'On up to $50,000 a year, then 1x'},
+      {x:4, t:'U.S. supermarkets', s:'On up to $25,000 a year, then 1x. Walmart, Target and Costco don’t count.'},
+      {x:3, t:'Flights booked direct or through Amex Travel'},
+      {x:2, t:'Prepaid car rentals and cruises through Amex Travel'},
+      {x:1, t:'Everything else'} ],
+    perks:[
+      {g:'Travel protection', items:[
+        {t:'Trip delay', s:'Up to $300 per trip for meals, lodging and essentials when a delay runs 12 hours or more. Two claims per 12 months.'},
+        {t:'Baggage insurance', s:'Up to $1,250 for carry-on and $500 for checked bags that are lost, stolen or damaged'},
+        {t:'Car rental loss and damage', s:'Secondary coverage up to $50,000. Decline the rental company’s damage waiver.'},
+        {t:'Global Assist hotline', s:'Referrals and coordination while traveling. It doesn’t pay medical costs.'},
+        {t:'Not included', s:'No trip cancellation, emergency medical or lounge access'} ]},
+      {g:'Purchase protection', items:[
+        {t:'Purchase protection', s:'Damage, theft or loss within 90 days, up to $10,000 per item and $50,000 a year'},
+        {t:'Extended warranty', s:'Adds one year to manufacturer warranties of five years or less, up to $10,000 per item'},
+        {t:'Not included', s:'No return protection or cell phone protection'} ]},
+      {g:'Hotels and cars', items:[
+        {t:'The Hotel Collection', s:'$100 property credit on stays of two nights or more booked through Amex Travel'},
+        {t:'Hertz Five Star status', s:'Enrollment required'} ]},
+      {g:'Everyday', items:[
+        {t:'No foreign transaction fees'},
+        {t:'Amex Offers', s:'Targeted merchant offers you add to the card in the Amex app'} ]} ] },
+  { id:'bilt', name:'Palladium Card', issuer:'Bilt', network:'World Legend Mastercard', fee:{2026:495}, anniv:true,
+    points:'Bilt Points',
+    earn:[
+      {x:2, t:'Everyday spend', s:'Plus 4% back in Bilt Cash on the same purchases'},
+      {x:1, t:'Rent and mortgage', s:'Only when backed by Bilt Cash: $1 of Bilt Cash unlocks 33.33 points. No Bilt Cash, no rent points.'} ],
+    perks:[
+      {g:'Lounges', items:[
+        {t:'Priority Pass lounge access'} ]},
+      {g:'Travel protection', items:[
+        {t:'Trip cancellation and interruption', s:'Up to $2,000 per traveler per trip for nonrefundable airfare'},
+        {t:'Trip delay', s:'Up to $300 per trip for meals and lodging when a delay runs 6 hours or more. One claim a year.'},
+        {t:'Baggage delay', s:'Up to $250 per claim for essentials'},
+        {t:'Lost or damaged luggage', s:'Up to $1,500 per incident, two claims a year'},
+        {t:'Rental car coverage', s:'Secondary coverage for theft and damage. Decline the rental company’s damage waiver.'} ]},
+      {g:'Purchase protection', items:[
+        {t:'Cell phone protection', s:'Up to $800 per claim and $1,000 a year, $50 deductible. Pay your phone bill with the card.'},
+        {t:'Purchase protection', s:'Damage or theft within 90 days, up to $1,000 per loss and $50,000 a year'},
+        {t:'Extended warranty', s:'Doubles the manufacturer warranty, up to 24 extra months and $10,000 per claim'},
+        {t:'Price protection', s:'Refunds the difference if you find a lower price within 90 days. Up to $250 per claim, four claims a year.'} ]},
+      {g:'Everyday', items:[
+        {t:'Pay rent and mortgage through Bilt with no transaction fee'},
+        {t:'Bilt Cash', s:'4% back on everyday spend plus $200 each anniversary. Balances over $100 expire at the end of each calendar year.'},
+        {t:'Identity theft resolution', s:'Mastercard ID Theft Protection'},
+        {t:'Mastercard concierge', s:'Restaurant reservations, event tickets and travel bookings'} ]} ] }
+];
+const CARD = Object.fromEntries(CARDS.map(c=>[c.id,c]));
+
+const CREDITS = [
+  {id:'csr-travel', card:'csr', name:'Travel credit', freq:'year', resetOn:'anniv', amt:300,
+    how:'Applies automatically to almost any purchase that codes as travel.',
+    info:['Resets on your card anniversary (May 1), not January 1.','No portal or activation needed. The statement credit posts a few days after the charge.','Counts for: airlines, hotels and motels, car rentals, cruise lines, travel agencies and booking sites, timeshares, campgrounds, trains, buses, taxis and rideshare (Uber, Lyft), limousines, ferries, public transit, tolls, and parking lots and garages.','Doesn’t count: airline gift cards, in-flight purchases, or merchants that sell travel inside another store.']},
+  {id:'csr-dd-r', card:'csr', name:'DoorDash restaurant promo', freq:'month', amts:[{from:'2000-01',amt:5},{from:'2026-10',amt:15}],
+    how:'A promo in the DoorDash app for one restaurant order a month.',
+    info:['Needs the complimentary DashPass membership that comes with the card. Activate it first.','Pay with Sapphire Reserve. The promo applies at checkout; it isn’t a statement credit.','It was $5 a month through September 2026 and is $15 from October.','Unused promos don’t roll over to the next month.']},
+  {id:'csr-dd-a', card:'csr', name:'DoorDash non-restaurant promo', freq:'month', amt:10,
+    how:'A promo for a grocery, convenience or retail order on DoorDash.',
+    info:['Not for restaurant orders. Use it on grocery, convenience, pharmacy or retail stores in DoorDash.','You get two of these $10 promos each month, one per order.','Needs DashPass activated and Sapphire Reserve as the payment method.','Doesn’t roll over.']},
+  {id:'csr-dd-b', card:'csr', name:'DoorDash non-restaurant promo, second', freq:'month', amt:10,
+    how:'The second $10 non-restaurant DoorDash promo for the month.',
+    info:['Same rules as the first: grocery, convenience or retail orders only, DashPass active, paid with Sapphire Reserve.','Each promo is for a separate order.']},
+  {id:'csr-lyft', card:'csr', name:'Lyft credit', freq:'month', amt:10, end:'2027-09',
+    how:'$10 in Lyft credit each month through September 2027.',
+    info:['Set Sapphire Reserve as your Lyft payment method.','The credit shows up in the Lyft app and is used on your next ride.','Rides also earn 5x points on the card.','Doesn’t roll over.']},
+  {id:'csr-peloton', card:'csr', name:'Peloton credit', freq:'month', amt:10,
+    how:'Up to $10 a month toward a Peloton membership.',
+    info:['Only for a Peloton membership billed to Sapphire Reserve.','Equipment and apparel don’t count.']},
+  {id:'csr-tables', card:'csr', name:'Exclusive Tables dining', freq:'half', amt:150,
+    how:'Only at the select restaurants in Chase’s Sapphire Reserve Exclusive Tables list on OpenTable.',
+    info:['Find the restaurants first: open the OpenTable app and look up the Sapphire Reserve Exclusive Tables list. Only those restaurants count.','Book through OpenTable and pay the bill with Sapphire Reserve.','$150 for January–June and $150 for July–December. Unused money doesn’t carry over.']},
+  {id:'csr-stubhub', card:'csr', name:'StubHub credit', freq:'half', amt:150,
+    how:'For tickets bought on StubHub or viagogo.',
+    info:['Activation required in your Chase account first.','$150 for January–June and $150 for July–December.','Pay with Sapphire Reserve.']},
+  {id:'csr-edit1', card:'csr', name:'The Edit hotel credit', freq:'year', amt:250,
+    how:'Only for hotels in The Edit collection, booked through Chase Travel.',
+    info:['Must be booked through the Chase Travel portal. Booking the same hotel directly won’t trigger it.','Only hotels in The Edit collection qualify, and only on prepaid rates.','Stays need to be two nights or more.','Two $250 credits per calendar year. These bookings also earn 8x points.']},
+  {id:'csr-edit2', card:'csr', name:'The Edit hotel credit, second', freq:'year', amt:250,
+    how:'The second $250 credit for The Edit this year.',
+    info:['Same rules as the first: The Edit hotels, booked and prepaid through Chase Travel, two nights or more.']},
+  {id:'csr-select', card:'csr', name:'Select Hotels credit', freq:'year', amt:250, start:'2026-01', end:'2026-12',
+    how:'A 2026-only hotel credit, booked through Chase Travel.',
+    info:['Must be booked through the Chase Travel portal.','Only participating hotel brands qualify. Check eligibility on the hotel listing in Chase Travel before you book.','Prepaid stays of two nights or more.','Ends December 31, 2026.']},
+  {id:'gold-uber', card:'gold', name:'Uber Cash', freq:'month', amt:10,
+    how:'$10 lands in your Uber account on the 1st of each month.',
+    info:['Add the Gold Card to your Uber account to receive it.','Works on U.S. rides or Uber Eats orders. Pick an Amex card at checkout.','Expires at the end of the month. It doesn’t roll over.']},
+  {id:'gold-dining', card:'gold', name:'Dining credit', freq:'month', amt:10,
+    how:'Only at Amex’s dining partners, not at any restaurant.',
+    info:['Partners: Grubhub (including Seamless), The Cheesecake Factory, Buffalo Wild Wings, Wonder and Five Guys.','Amex changes this list from time to time. Goldbelly and Wine.com were dropped in 2026.','Enrollment required in the Amex app.','$10 a month, no rollover.']},
+  {id:'gold-dunkin', card:'gold', name:'Dunkin’ credit', freq:'month', amt:7,
+    how:'Up to $7 a month at U.S. Dunkin’ locations.',
+    info:['Enrollment required in the Amex app.','Pay with the Gold Card. Loading a Dunkin’ gift card may not count.','No rollover.']},
+  {id:'gold-resy', card:'gold', name:'Resy credit', freq:'half', amt:50,
+    how:'Dine at a U.S. restaurant that’s on Resy and pay with the Gold Card.',
+    info:['The restaurant has to be on Resy, but you don’t have to book through Resy.','Enrollment required.','$50 for January–June and $50 for July–December.']},
+  {id:'bilt-hotel', card:'bilt', name:'Bilt Travel hotel credit', freq:'half', amt:200,
+    how:'Book through the Bilt Travel portal. Any hotel listed there qualifies.',
+    info:['Must be booked through the Bilt Travel portal in the Bilt app.','Any hotel on the portal works.','$200 for January–June and $200 for July–December, as statement credits.']},
+  {id:'bilt-cash', card:'bilt', name:'Bilt Cash', freq:'year', resetOn:'anniv', amt:200, cash:true,
+    how:'$200 of Bilt Cash on each account anniversary.',
+    info:['Bilt Cash isn’t worth a dollar per dollar. $1 of Bilt Cash converts to 33.33 Bilt Points, which are worth about 33¢ to 66¢ depending on how you redeem them.','Some swaps are close to face value (for example, Grubhub credit), but most aren’t.','It’s also what unlocks your rent points: 1 point per rent dollar takes 3% of your rent in Bilt Cash.','Balances over $100 expire at the end of each calendar year.','The Value tab counts it at the rate you set on the Palladium card page.']}
+];
+const FREQ = {month:'Monthly', half:'Every six months', year:'Yearly'};
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_L = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/* ---------- category guide ---------- */
+const GUIDE = [
+  {cat:'Dining', s:'Sit-down, takeout, delivery, coffee shops, bars', r:{csr:3,gold:4,bilt:2}, tip:'Gold earns 4x on the first $50,000 a year.'},
+  {cat:'U.S. supermarkets', s:'Traditional grocery stores', r:{csr:1,gold:4,bilt:2}, tip:'Walmart, Target and warehouse clubs don’t count as supermarkets. Use Palladium there.'},
+  {cat:'Flights booked direct', s:'On the airline’s own site or app', r:{csr:4,gold:3,bilt:2}},
+  {cat:'Hotels booked direct', s:'On the hotel’s own site or app', r:{csr:4,gold:1,bilt:2}},
+  {cat:'Chase Travel and The Edit', s:'Flights, hotels and cars through the Chase portal', r:{csr:8,gold:null,bilt:null}, tip:'Also where your $300 travel credit and The Edit credits get used.'},
+  {cat:'Prepaid hotels through Amex Travel', r:{csr:null,gold:5,bilt:null}, tip:'Compare the price on Chase Travel first. The same hotel there earns 8x on Sapphire Reserve.'},
+  {cat:'Lyft rides', r:{csr:5,gold:1,bilt:2}},
+  {cat:'Uber Eats', s:'After your $10 monthly Uber Cash', r:{csr:3,gold:4,bilt:2}, tip:'Restaurant orders earn the Gold dining rate.'},
+  {cat:'Uber rides', s:'After your $10 monthly Uber Cash', r:{csr:1,gold:1,bilt:2}},
+  {cat:'Rent and mortgage', s:'Paid through Bilt', r:{csr:null,gold:null,bilt:1}, rent:true},
+  {cat:'Costco warehouse', s:'In-store purchases', r:{csr:1,gold:null,bilt:null}, tip:'Costco warehouses take only Visa. Palladium is a Mastercard and Gold is Amex.'},
+  {cat:'Everything else', s:'Gas, streaming, Walmart, Target, online shopping', r:{csr:1,gold:1,bilt:2}, tip:'Palladium also adds 4% back in Bilt Cash, which is what unlocks your rent points.'}
+];
+
+/* ---------- state ----------
+   Everything lives in one Firestore doc, users/{uid}. Each check-off in S.log keeps its own dollar
+   amount (amt), the credit's full amount for that period (face) and its card, so editing CREDITS
+   later never rewrites history. Annual fees are stored per card per year in S.fees. */
+const DATA_KEYS = ['off','anniv','rent','biltRate','fees','log'];
+let S = null, USER = null, userRef = null, unsub = null, snapTaken = false;
+function blank(){ return {log:{}, off:{'csr-peloton':true}, anniv:{csr:5,bilt:null}, rent:1811, biltRate:0.5,
+  fees:Object.fromEntries(CARDS.map(c=>[c.id,{...c.fee}]))}; }
+const pick = s => Object.fromEntries(DATA_KEYS.map(k=>[k,s[k]]));
+// Callers change S first, then save the one field they touched. Offline, the write is queued and syncs later.
+function save(path, value){
+  updateDoc(userRef, new FieldPath(...path), value).catch(err=>{ console.error(err); toast('Couldn’t save that change'); });
+}
+
+/* ---------- date helpers ---------- */
+const NOW = new Date();
+const pad = n=>String(n).padStart(2,'0');
+const ymStr=(y,m)=>`${y}-${pad(m)}`;
+const today = {y:NOW.getFullYear(), m:NOW.getMonth()+1};
+const fmt = n => '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2, maximumFractionDigits:2});
+
+function amtAt(c, y, m){
+  if(!c.amts) return c.amt;
+  const k=ymStr(y,m); let a=c.amts[0].amt;
+  for(const h of c.amts){ if(h.from<=k) a=h.amt; }
+  return a;
+}
+function activeAt(c,y,m){
+  const k=ymStr(y,m);
+  if(c.start && k<c.start) return false;
+  if(c.end && k>c.end) return false;
+  return true;
+}
+function annivMonth(c){ return (c.resetOn==='anniv' && CARD[c.card].anniv) ? S.anniv[c.card] : null; }
+function periodKey(c,y,m){
+  if(c.freq==='month') return ymStr(y,m);
+  if(c.freq==='half') return `${y}-H${m<=6?1:2}`;
+  const a=annivMonth(c);
+  if(a){ const sy = m>=a ? y : y-1; return `CY${sy}-${pad(a)}`; }
+  return String(y);
+}
+function periodEnd(c,y,m){ // date the credit resets (first day of next period)
+  if(c.freq==='month') return new Date(y, m, 1);
+  if(c.freq==='half') return m<=6 ? new Date(y,6,1) : new Date(y+1,0,1);
+  const a=annivMonth(c);
+  if(a){ const sy = m>=a ? y : y-1; return new Date(sy+1, a-1, 1); }
+  return new Date(y+1,0,1);
+}
+const fmtDate = d => `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear()!==today.y?', '+d.getFullYear():''}`;
+const entry = (c,y,m) => S.log[`${c.id}|${periodKey(c,y,m)}`];
+const isOn = c => !S.off[c.id];
+
+/* ---------- value math ---------- */
+const creditOf = id => CREDITS.find(x=>x.id===id);
+const worth = (c, amt) => c?.cash ? amt*(S.biltRate ?? 0.5) : amt;
+const mkEntry = (c, amt, face, ym) => ({amt, face, card:c.card, ym});
+function usedInYear(cardId, Y){
+  let t=0; for(const [k,e] of Object.entries(S.log)){ if(e.card===cardId&&e.ym.startsWith(Y+'-')) t+=worth(creditOf(k.split('|')[0]),e.amt); } return t;
+}
+function usedByCredit(c, Y){
+  let t=0; for(const [k,e] of Object.entries(S.log)){ if(k.split('|')[0]===c.id && e.ym.startsWith(Y+'-')) t+=worth(c,e.amt); } return t;
+}
+function possibleByCredit(c, Y){
+  if(!isOn(c)) return 0;
+  if(c.freq==='month'){ let t=0; for(let m=1;m<=12;m++) if(activeAt(c,Y,m)) t+=amtAt(c,Y,m); return t; }
+  if(c.freq==='half'){ let t=0; if(activeAt(c,Y,1)) t+=amtAt(c,Y,1); if(activeAt(c,Y,7)) t+=amtAt(c,Y,7); return t; }
+  return activeAt(c,Y,12)||activeAt(c,Y,1) ? worth(c,amtAt(c,Y,12)) : 0;
+}
+function annualValue(cardId){ return CREDITS.filter(c=>c.card===cardId).reduce((t,c)=>t+possibleByCredit(c,today.y),0); }
+// Fee on file for year Y, else the closest earlier year, else the earliest year on file
+function feeFor(card,Y){
+  const f=S.fees[card.id]||card.fee, ys=Object.keys(f).map(Number).sort((a,b)=>a-b);
+  if(f[Y]!=null) return f[Y];
+  const prior=ys.filter(y=>y<Y); return f[prior.length?prior.at(-1):ys[0]];
+}
+
+/* ---------- ui state ---------- */
+const UI = { tab:'tracker', cardDetail:null, ty:today.y, tm:today.m, filter:'all', vy:today.y, open:{}, month:null, q:'' };
+const tabs = ['cards','tracker','guide','value'];
+const h = (s)=>s; // template helper marker
+const esc = s => String(s).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+const colorVar = id => `var(--${id})`;
+const view = document.getElementById('view');
+
+function setTab(t){
+  UI.tab=t; UI.cardDetail=null;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current', b.dataset.tab===t?'page':'false'));
+  render(); window.scrollTo(0,0);
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+
+function render(){
+  const titles={cards:'Cards',tracker:'Tracker',guide:'Best card',value:'Value'};
+  document.getElementById('title').textContent = UI.cardDetail ? CARD[UI.cardDetail].name : titles[UI.tab];
+  document.getElementById('topright').textContent = UI.tab==='value' ? String(UI.vy) : (UI.tab==='tracker'?'':'');
+  ({cards:renderCards, tracker:renderTracker, guide:renderGuide, value:renderValue})[UI.tab]();
+}
+
+/* ---------- card art ---------- */
+const CARD_IMG = {csr:'img/csr.webp', gold:'img/gold.webp', bilt:'img/bilt.webp'};
+function art(c){
+  return `<img class="cardimg" src="${CARD_IMG[c.id]}" alt="${esc(c.issuer+' '+c.name)} card" width="480" height="303" decoding="async">`;
+}
+
+/* ---------- tab 1: cards ---------- */
+function renderCards(){
+  if(UI.cardDetail) return renderCardDetail(CARD[UI.cardDetail]);
+  view.innerHTML = `<div class="cardlist">${CARDS.map(c=>`
+    <button class="cardtile" type="button" data-card="${c.id}" aria-label="${esc(c.issuer+' '+c.name)} details">
+      ${art(c)}
+      <div class="meta"><span>Annual fee <b class="num">${fmt(feeFor(c,today.y))}</b></span><span>Credits <b class="num">${fmt(annualValue(c.id))}</b>/yr</span></div>
+    </button>`).join('')}</div>
+    <section class="panel">
+      <div class="ptitle"><h2>Backup and reminders</h2></div>
+      <div class="field"><div>Backup file<small>${S.lastSnapshot?`A copy is also saved automatically each month. Latest: ${MONTHS_L[Number(S.lastSnapshot.slice(5))-1]} ${S.lastSnapshot.slice(0,4)}.`:'A copy is also saved automatically each month.'}</small></div></div>
+      <div class="btns" style="padding:0 16px 14px"><button class="btn" type="button" id="exp">Export backup</button><button class="btn" type="button" id="imp">Import backup</button></div>
+      <div class="field" style="border-top:1px solid var(--line)"><div>Calendar reminders<small>The 25th of every month, plus June 1 and December 1 for the six-month credits</small></div></div>
+      <div class="btns" style="padding:0 16px 14px"><button class="btn" type="button" id="ics">Download calendar file</button></div>
+      <div class="field" style="border-top:1px solid var(--line)"><div>Signed in<small>${esc(USER.email||'')}</small></div><button class="btn" type="button" id="out">Sign out</button></div>
+    </section>`;
+  view.querySelectorAll('[data-card]').forEach(b=>b.addEventListener('click',()=>{UI.cardDetail=b.dataset.card; render(); window.scrollTo(0,0);}));
+  document.getElementById('exp').addEventListener('click',exportBackup);
+  document.getElementById('imp').addEventListener('click',()=>document.getElementById('importFile').click());
+  document.getElementById('ics').addEventListener('click',downloadCalendar);
+  document.getElementById('out').addEventListener('click',doSignOut);
+}
+function renderCardDetail(c){
+  const credits=CREDITS.filter(x=>x.card===c.id);
+  const fee=feeFor(c,today.y), val=annualValue(c.id);
+  const groups=['month','half','year'].map(f=>({f,list:credits.filter(x=>x.freq===f)})).filter(g=>g.list.length);
+  const monthOpts = ['<option value="">Not set (uses Jan 1)</option>'].concat(MONTHS_L.map((n,i)=>`<option value="${i+1}" ${S.anniv[c.id]===i+1?'selected':''}>${n}</option>`)).join('');
+  view.innerHTML = `
+    <button class="back" type="button" id="back">‹ All cards</button>
+    ${art(c)}
+    <div class="statrow">
+      <div class="stat"><div class="k">Annual fee</div><div class="v num">${fmt(fee)}</div></div>
+      <div class="stat"><div class="k">Credits per year</div><div class="v num">${fmt(val)}</div></div>
+      <div class="stat"><div class="k">Credits minus fee</div><div class="v num">${val>=fee?'+':'−'}${fmt(Math.abs(val-fee))}</div></div>
+    </div>
+    <section class="panel">
+      <div class="field"><div><label for="fee-in">Annual fee for ${today.y}</label><small>Saved for ${today.y} only. Past years keep their own fee.</small></div>
+        <div class="amtin"><span>$</span><input id="fee-in" type="number" inputmode="decimal" min="0" step="1" value="${fee}"></div></div>
+      ${c.anniv?`<div class="field" style="border-top:1px solid var(--line)"><div><label for="anniv-${c.id}">Card anniversary month</label><small>${c.id==='csr'?'The $300 travel credit resets on this date.':'Your $200 Bilt Cash arrives on this date.'}</small></div><select id="anniv-${c.id}">${monthOpts}</select></div>`:''}
+    </section>
+    ${c.id==='bilt'?rentPanel():''}
+    <section class="panel">
+      <div class="ptitle"><h2>Statement credits</h2><span class="sub">Turn off any you won’t use</span></div>
+      ${groups.map(g=>`<div class="ptitle" style="padding-top:10px"><span class="eyebrow">${FREQ[g.f]}</span></div>
+        <ul class="rows">${g.list.map(x=>`<li><div class="crow ${isOn(x)?'':'off'}"><div class="d"><div class="n">${esc(x.name)}</div><small>${esc(creditSub(x))}</small></div><span class="amt num">${x.cash?'≈ ':''}${fmt(worth(x,amtAt(x,today.y,today.m)))}</span>${ibtn(x)}<button class="switch" type="button" role="switch" id="sw-${x.id}" aria-label="Track ${esc(x.name)}" aria-checked="${isOn(x)}" data-sw="${x.id}"></button></div></li>`).join('')}</ul>`).join('')}
+    </section>
+    <section class="panel">
+      <div class="ptitle"><h2>Earn rates</h2><span class="sub">${esc(c.points)}</span></div>
+      <ul class="rows">${c.earn.map(e=>`<li><div class="erow"><span class="x" style="color:${colorVar(c.id)}">${e.x}x</span><span class="d">${esc(e.t)}${e.s?`<small>${esc(e.s)}</small>`:''}</span></div></li>`).join('')}</ul>
+    </section>
+    <section class="panel">
+      <div class="ptitle"><h2>Other benefits</h2><span class="sub">${esc(c.network)}</span></div>
+      ${c.perks.map(g=>`<div class="ptitle" style="padding-top:10px"><span class="eyebrow">${esc(g.g)}</span></div>
+      <ul class="rows">${g.items.map(p=>`<li><div class="perk ${p.t==='Not included'?'muted':''}">${esc(p.t)}${p.s?`<small>${esc(p.s)}</small>`:''}</div></li>`).join('')}</ul>`).join('')}
+    </section>`;
+  document.getElementById('back').addEventListener('click',()=>{UI.cardDetail=null; render();});
+  bindInfo();
+  const bsel=document.getElementById('bilt-rate');
+  if(bsel) bsel.addEventListener('change',()=>{ S.biltRate=Number(bsel.value); save(['biltRate'],S.biltRate); render(); toast('Bilt Cash value updated'); });
+  const rin=document.getElementById('rent-in');
+  if(rin) rin.addEventListener('input',()=>{ const v=parseFloat(rin.value); S.rent = v>0?v:0; const r=S.rent; clearTimeout(rentT); rentT=setTimeout(()=>save(['rent'],r),400); document.getElementById('rent-out').innerHTML=rentRows(); });
+  view.querySelectorAll('[data-sw]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.sw; if(S.off[id]) delete S.off[id]; else S.off[id]=true; save(['off',id], S.off[id]?true:deleteField()); render(); }));
+  const sel=document.getElementById('anniv-'+c.id);
+  if(sel) sel.addEventListener('change',()=>{ S.anniv[c.id]= sel.value?Number(sel.value):null; save(['anniv',c.id],S.anniv[c.id]); toast('Anniversary month saved'); });
+  const fin=document.getElementById('fee-in');
+  fin.addEventListener('change',()=>{ const v=parseFloat(fin.value); if(!(v>=0)) return; (S.fees[c.id] ||= {})[today.y]=v; save(['fees',c.id,String(today.y)],v); render(); toast('Annual fee saved'); });
+}
+let rentT;
+/* Bilt rent math: $1 Bilt Cash = 33.33 points, so 1 point per rent dollar costs 3% of rent in Bilt Cash */
+const PTS_PER_CASH = 33.33;
+function rentMath(rent){ const cash=rent/PTS_PER_CASH; return {cash, spend:cash/0.04, pts:Math.round(rent), yearCash:cash*12, creditMonths:200/(cash||1)}; }
+function rentTip(){ const r=rentMath(S.rent||0); return S.rent ? `1 point per dollar only when backed by Bilt Cash. Your ${fmt(S.rent)} rent needs ${fmt(Math.ceil(r.cash*100)/100)} of Bilt Cash a month, which about ${fmt(Math.ceil(r.spend))} of Palladium spend earns at 4%.` : '1 point per dollar only when backed by Bilt Cash.'; }
+function rentRows(){
+  const r=rentMath(S.rent||0);
+  return `<div class="brow"><span class="l">Bilt Cash needed each month</span><span class="num">${fmt(Math.ceil(r.cash*100)/100)}</span></div>
+    <div class="brow"><span class="l">Card spend to earn that at 4%</span><span class="num">${fmt(Math.ceil(r.spend))}</span></div>
+    <div class="brow"><span class="l">Rent points unlocked each month</span><span class="num">${r.pts.toLocaleString('en-US')}</span></div>
+    <div class="brow"><span class="l">Months the $200 Bilt Cash credit covers</span><span class="num">${S.rent?r.creditMonths.toFixed(1):'—'}</span></div>`;
+}
+function rentPanel(){
+  return `<section class="panel">
+    <div class="ptitle"><h2>Rent points</h2><span class="sub">$1 Bilt Cash = 33.33 points</span></div>
+    <div class="field"><div><label for="rent-in">Monthly rent</label><small>Without enough Bilt Cash, rent earns nothing.</small></div>
+      <div class="amtin"><span>$</span><input id="rent-in" type="number" inputmode="decimal" min="0" step="0.01" value="${S.rent||''}"></div></div>
+    <div class="breakdown" id="rent-out">${rentRows()}</div>
+    <div class="field" style="border-top:1px solid var(--line)"><div><label for="bilt-rate">Value of $1 Bilt Cash</label><small>33.33 points at 1¢ to 2¢ each. Used for the Value tab.</small></div>
+      <select id="bilt-rate">${[[0.33,'33¢ (1¢ per point)'],[0.4,'40¢'],[0.5,'50¢ (1.5¢ per point)'],[0.6,'60¢'],[0.66,'66¢ (2¢ per point)']].map(([v,l])=>`<option value="${v}" ${(S.biltRate??0.5)===v?'selected':''}>${l}</option>`).join('')}</select></div>
+  </section>`;
+}
+function creditSub(x){
+  if(x.freq==='month') return x.end ? `Every month through ${MONTHS[Number(x.end.slice(5))-1]} ${x.end.slice(0,4)}` : 'Every month';
+  if(x.freq==='half') return 'Jan–Jun and Jul–Dec';
+  if(x.start && x.end && x.start.slice(0,4)===x.end.slice(0,4)) return `${x.start.slice(0,4)} only`;
+  return x.resetOn==='anniv' ? 'Resets on card anniversary' : 'Resets Jan 1';
+}
+
+/* ---------- tab 2: tracker ---------- */
+function renderTracker(){
+  const y=UI.ty, m=UI.tm;
+  const isCurrent = y===today.y && m===today.m;
+  const list = CREDITS.filter(c=>isOn(c) && activeAt(c,y,m) && (UI.filter==='all'||c.card===UI.filter));
+  const halfLabel = m<=6?'Jan–Jun':'Jul–Dec';
+  const sections = [
+    {f:'month', title:'Monthly', sub:`Resets ${fmtDate(new Date(y,m,1))}`},
+    {f:'half', title:'Every six months', sub:`${halfLabel} · resets ${fmtDate(m<=6?new Date(y,6,1):new Date(y+1,0,1))}`},
+    {f:'year', title:'Yearly', sub:'Each resets on its own date'}
+  ];
+  const atMax = ymStr(y,m) >= ymStr(today.y, today.m);
+  view.innerHTML = `
+    <div class="monthbar">
+      <button class="iconbtn" type="button" id="prevM" aria-label="Previous month">‹</button>
+      <div style="text-align:center"><div class="m">${MONTHS_L[m-1]} ${y}</div><div class="eyebrow">${isCurrent?'This month':'Logging a past month'}</div></div>
+      <button class="iconbtn" type="button" id="nextM" aria-label="Next month" ${atMax?'disabled':''}>›</button>
+    </div>
+    <div class="chips" role="group" aria-label="Filter by card">
+      <button type="button" data-f="all" aria-pressed="${UI.filter==='all'}">All cards</button>
+      ${CARDS.map(c=>`<button type="button" data-f="${c.id}" aria-pressed="${UI.filter===c.id}"><span class="dot" style="background:${colorVar(c.id)}"></span>${esc(c.name)}</button>`).join('')}
+    </div>
+    ${sections.map(sec=>{
+      const items=list.filter(c=>c.freq===sec.f);
+      if(!items.length) return '';
+      let used=0,total=0; items.forEach(c=>{ const e=entry(c,y,m), a=e?.face ?? amtAt(c,y,m); total+=worth(c,a); if(e) used+=worth(c,Math.min(e.amt,a)); });
+      return `<section class="panel">
+        <div class="ptitle"><h2>${sec.title}</h2><span class="sub"><span class="num">${fmt(used)}</span> of <span class="num">${fmt(total)}</span></span></div>
+        <div class="ptitle" style="padding-top:0"><span class="sub" style="text-align:left">${sec.sub}</span></div>
+        <div class="prog" aria-hidden="true"><i style="width:${total?Math.round(used/total*100):0}%"></i></div>
+        <ul class="rows">${items.map(c=>trow(c,y,m)).join('')}</ul>
+      </section>`;
+    }).join('') || `<div class="panel"><div class="empty">No credits for this card this month.</div></div>`}`;
+  document.getElementById('prevM').addEventListener('click',()=>{ if(--UI.tm<1){UI.tm=12;UI.ty--;} render(); });
+  document.getElementById('nextM').addEventListener('click',()=>{ if(atMax) return; if(++UI.tm>12){UI.tm=1;UI.ty++;} render(); });
+  view.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>{UI.filter=b.dataset.f; render();}));
+  view.querySelectorAll('[data-toggle]').forEach(b=>b.addEventListener('click',()=>toggleCredit(b.dataset.toggle)));
+  view.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>openSheet(b.dataset.open)));
+  bindInfo();
+}
+function trow(c,y,m){
+  const e=entry(c,y,m), a=e?.face ?? amtAt(c,y,m), card=CARD[c.card];
+  const done = e && e.amt>=a, part = e && e.amt<a;
+  const end=periodEnd(c,y,m), days=Math.ceil((end-NOW)/86400000);
+  const soon = !e && days>0 && days<=7;
+  let sub = c.freq==='year' ? `${card.name} · resets ${fmtDate(end)}` : card.name;
+  if(soon) sub = `${card.name} · expires in ${days} day${days===1?'':'s'}`;
+  if(e && e.ym!==ymStr(y,m) && c.freq!=='month') sub = `${card.name} · used in ${MONTHS[Number(e.ym.slice(5))-1]}`;
+  if(c.cash) sub = `${fmt(a)} Bilt Cash · ` + sub.replace(card.name+' · ','').replace(card.name,'resets '+fmtDate(end));
+  return `<li><div class="trow ${done?'done':''} ${part?'part':''}" style="--c:${colorVar(c.card)};--p:${part?Math.round(e.amt/a*100):0}%">
+    <button class="check" type="button" data-toggle="${c.id}" aria-label="${done?'Uncheck':'Check off'} ${esc(c.name)}" aria-pressed="${!!done}"><span class="ring"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></button>
+    <button class="body" type="button" data-open="${c.id}">
+      <span class="t"><span class="n">${esc(c.name)}</span><small class="${soon?'soon':''}">${esc(sub)}</small></span>
+      <span class="a num">${c.cash?'≈ ':''}${part?`${fmt(worth(c,e.amt))}<span class="of"> / ${fmt(worth(c,a))}</span>`:fmt(worth(c,a))}</span>
+    </button>
+    ${ibtn(c)}</div></li>`;
+}
+function logYm(){ return ymStr(UI.ty,UI.tm); }
+function toggleCredit(id){
+  const c=CREDITS.find(x=>x.id===id), y=UI.ty, m=UI.tm, k=`${c.id}|${periodKey(c,y,m)}`, e=S.log[k], a=e?.face ?? amtAt(c,y,m);
+  if(e && e.amt>=a){ delete S.log[k]; save(['log',k], deleteField()); }
+  else { S.log[k]=mkEntry(c,a,a,logYm()); save(['log',k], S.log[k]); }
+  render();
+}
+
+/* ---------- pop-up scroll lock ----------
+   While a sheet is open the page behind it is pinned in place (body fixed at the current
+   scroll offset), so swipes can only scroll the sheet. Closing restores the exact position. */
+const scrim=document.getElementById('scrim');
+let lockedY=0, opener=null;
+function showModal(){
+  if(scrim.hidden){
+    opener=document.activeElement;
+    lockedY=window.scrollY;
+    document.body.style.top=`-${lockedY}px`;
+    document.body.classList.add('locked');
+  }
+  scrim.hidden=false;
+  const f=scrim.querySelector('.sheet'); if(f){ f.setAttribute('tabindex','-1'); f.focus({preventScroll:true}); }
+}
+function hideModal(){
+  scrim.hidden=true; scrim.innerHTML='';
+  document.body.classList.remove('locked'); document.body.style.top='';
+  window.scrollTo(0,lockedY);
+  if(opener && document.contains(opener)) opener.focus({preventScroll:true});
+}
+// iOS: block swipes on the dimmed backdrop, and stop a sheet that can't scroll further from dragging the page
+scrim.addEventListener('touchmove',e=>{
+  const sh=e.target.closest && e.target.closest('.sheet');
+  if(!sh || sh.scrollHeight<=sh.clientHeight) e.preventDefault();
+},{passive:false});
+
+/* ---------- info button + sheet ---------- */
+function ibtn(c){ return `<button class="ibtn" type="button" data-info="${c.id}" aria-label="Details for ${esc(c.name)}"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5"/><circle cx="10" cy="6.2" r=".6" class="dotfill"/></svg></button>`; }
+function infoBlock(c){ return `<div class="how"><p>${esc(c.how)}</p>${c.info?`<ul>${c.info.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}</div>`; }
+function bindInfo(){ view.querySelectorAll('[data-info]').forEach(b=>b.addEventListener('click',()=>openInfo(b.dataset.info))); }
+function openInfo(id){
+  const c=CREDITS.find(x=>x.id===id), a=amtAt(c,today.y,today.m);
+  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="in-t">
+    <div class="grab"></div>
+    <div><div class="eyebrow" style="color:${colorVar(c.card)}">${esc(CARD[c.card].issuer+' '+CARD[c.card].name)} · ${FREQ[c.freq]}</div><h3 id="in-t">${esc(c.name)}</h3>
+      <div class="num" style="color:var(--fg2);margin-top:2px">${fmt(a)}${c.cash?` Bilt Cash, counted as ${fmt(worth(c,a))}`:''} · ${esc(creditSub(c))}</div></div>
+    ${infoBlock(c)}
+    <div class="btns"><button class="btn primary" type="button" id="in-close">Done</button></div>
+  </div>`;
+  showModal();
+  const close=hideModal;
+  document.getElementById('in-close').onclick=close;
+  scrim.onclick=ev=>{ if(ev.target===scrim) close(); };
+}
+
+/* ---------- partial-amount sheet ---------- */
+function openSheet(id){
+  const c=CREDITS.find(x=>x.id===id), y=UI.ty, m=UI.tm, k=`${c.id}|${periodKey(c,y,m)}`, e=S.log[k], a=e?.face ?? amtAt(c,y,m);
+  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+    <div class="grab"></div>
+    <div><div class="eyebrow" style="color:${colorVar(c.card)}">${esc(CARD[c.card].issuer+' '+CARD[c.card].name)} · ${FREQ[c.freq]}</div><h3 id="sh-t">${esc(c.name)}</h3></div>
+    ${infoBlock(c)}
+    <div class="amtin"><label for="sh-amt">Amount used</label><input id="sh-amt" type="number" inputmode="decimal" min="0" max="${a}" step="0.01" value="${e?e.amt:''}" placeholder="0"><span class="num" style="color:var(--fg3)">of ${fmt(a)}${c.cash?' Bilt Cash':''}</span></div>
+    <div class="btns"><button class="btn" type="button" id="sh-full">Used all ${fmt(a)}</button>${e?'<button class="btn" type="button" id="sh-clear">Clear</button>':''}</div>
+    <div class="btns"><button class="btn" type="button" id="sh-cancel">Cancel</button><button class="btn primary" type="button" id="sh-save">Save</button></div>
+  </div>`;
+  showModal();
+  const inp=document.getElementById('sh-amt');
+  const close=hideModal;
+  const commit=v=>{
+    if(v>0){ S.log[k]=mkEntry(c,Math.min(v,a),a,e?e.ym:logYm()); save(['log',k], S.log[k]); }
+    else if(S.log[k]){ delete S.log[k]; save(['log',k], deleteField()); }
+    close(); render(); };
+  document.getElementById('sh-full').onclick=()=>commit(a);
+  const cl=document.getElementById('sh-clear'); if(cl) cl.onclick=()=>commit(0);
+  document.getElementById('sh-cancel').onclick=close;
+  document.getElementById('sh-save').onclick=()=>commit(parseFloat(inp.value)||0);
+  scrim.onclick=ev=>{ if(ev.target===scrim) close(); };
+}
+
+/* ---------- tab 3: best card guide ---------- */
+function renderGuide(){
+  const q=UI.q.trim().toLowerCase();
+  const rows=GUIDE.filter(g=>!q || (g.cat+' '+(g.s||'')+' '+(g.tip||'')).toLowerCase().includes(q));
+  view.innerHTML=`
+    <p class="note" style="margin:0">All three cards earn transferable points, so this compares them point for point. Open a card in the Cards tab for its full earn list.</p>
+    <label for="gq" class="eyebrow" style="margin-bottom:-12px">Search a category</label>
+    <input class="search" id="gq" type="search" placeholder="Groceries, flights, Uber…" value="${esc(UI.q)}" autocomplete="off">
+    <section class="panel"><ul class="rows" id="glist">${rows.map(grow).join('') || '<li><div class="empty">No match. “Everything else” goes on Palladium at 2x.</div></li>'}</ul></section>`;
+  const gq=document.getElementById('gq');
+  gq.addEventListener('input',()=>{ UI.q=gq.value; const q2=UI.q.trim().toLowerCase(); document.getElementById('glist').innerHTML = GUIDE.filter(g=>!q2||(g.cat+' '+(g.s||'')+' '+(g.tip||'')).toLowerCase().includes(q2)).map(grow).join('') || '<li><div class="empty">No match. “Everything else” goes on Palladium at 2x.</div></li>'; });
+}
+function grow(g){
+  const ids=Object.keys(g.r).filter(k=>g.r[k]!=null);
+  const best=ids.reduce((a,b)=>g.r[b]>g.r[a]?b:a, ids[0]);
+  return `<li><div class="grow">
+    <div class="top"><div class="cat">${esc(g.cat)}${g.s?`<small>${esc(g.s)}</small>`:''}</div>
+      <span class="winner" style="--c:${colorVar(best)}"><span class="dot" style="background:${colorVar(best)}"></span>${esc(CARD[best].name)} <span class="x">${g.r[best]}x</span></span></div>
+    <div class="rates">${CARDS.map(c=>{ const v=g.r[c.id]; return `<span class="rate ${c.id===best?'best':''} ${v==null?'na':''}"><span class="dot" style="background:${colorVar(c.id)}"></span>${esc(c.name)} <span class="num">${v==null?'—':v+'x'}${c.id==='bilt'&&v===2?' + 4%':''}</span></span>`; }).join('')}</div>
+    ${g.rent?`<div class="tip">${esc(rentTip())}</div>`:g.tip?`<div class="tip">${esc(g.tip)}</div>`:''}
+  </div></li>`;
+}
+
+/* ---------- tab 4: value ---------- */
+function renderValue(){
+  const Y=UI.vy;
+  const per=CARDS.map(c=>{ const used=usedInYear(c.id,Y), fee=feeFor(c,Y), poss=CREDITS.filter(x=>x.card===c.id).reduce((t,x)=>t+possibleByCredit(x,Y),0); return {c,used,fee,poss}; });
+  const U=per.reduce((t,p)=>t+p.used,0), F=per.reduce((t,p)=>t+p.fee,0), net=U-F;
+  // monthly stacks
+  const monthly=Array.from({length:12},(_,i)=>{ const ym=ymStr(Y,i+1); const by={csr:0,gold:0,bilt:0}; for(const [k,e] of Object.entries(S.log)){ if(e.ym!==ym || by[e.card]==null) continue; by[e.card]+=worth(creditOf(k.split('|')[0]),e.amt); } return by; });
+  const mtot=monthly.map(b=>b.csr+b.gold+b.bilt);
+  const rawMax=Math.max(50,...mtot);
+  const step = rawMax>600?200: rawMax>300?100:50;
+  const ymax=Math.ceil(rawMax/step)*step;
+  const ticks=[]; for(let v=step; v<=ymax; v+=step) ticks.push(v);
+  view.innerHTML=`
+    <div class="monthbar">
+      <button class="iconbtn" type="button" id="prevY" aria-label="Previous year">‹</button>
+      <div class="hero" style="text-align:center;align-items:center">
+        <span class="eyebrow">Credits redeemed in ${Y}</span>
+        <span class="big num">${fmt(U)}</span>
+        <span class="vs">vs <span class="num">${fmt(F)}</span> in annual fees</span>
+      </div>
+      <button class="iconbtn" type="button" id="nextY" aria-label="Next year" ${Y>=today.y?'disabled':''}>›</button>
+    </div>
+    <div style="display:flex;justify-content:center">${net>=0?`<span class="pill good">✓ Ahead by <span class="num">${fmt(net)}</span></span>`:`<span class="pill warn">▲ <span class="num">${fmt(-net)}</span> to break even</span>`}</div>
+    <section class="panel">
+      <div class="ptitle"><h2>By card</h2><span class="sub">Tap for each credit</span></div>
+      <div class="ptitle" style="padding-top:0"><span class="sub" style="text-align:left">Bilt Cash counted at ${Math.round((S.biltRate??0.5)*100)}¢ per dollar. Change it on the Palladium card page.</span></div>
+      <ul class="rows">${per.map(p=>{
+        const scale=Math.max(p.fee,p.used,p.poss)||1, gap=p.used-p.fee, open=UI.open[p.c.id];
+        const credits=CREDITS.filter(x=>x.card===p.c.id).map(x=>({x,u:usedByCredit(x,Y),p:possibleByCredit(x,Y)})).filter(r=>r.p>0||r.u>0).sort((a,b)=>b.u-a.u);
+        return `<li><button class="vcard" type="button" data-vc="${p.c.id}" aria-expanded="${!!open}" style="--c:${colorVar(p.c.id)}">
+          <div class="top"><span class="name"><span class="dot" style="background:${colorVar(p.c.id)}"></span>${esc(p.c.name)}</span>
+            ${gap>=0?`<span class="pill good">✓ Ahead <span class="num">${fmt(gap)}</span></span>`:`<span class="pill warn">▲ <span class="num">${fmt(-gap)}</span> to go</span>`}</div>
+          <div class="vbar" role="img" aria-label="${fmt(p.used)} used against a ${fmt(p.fee)} fee"><span class="fill" style="width:${Math.min(100,p.used/scale*100)}%"></span><span class="fee" style="left:calc(${p.fee/scale*100}% - 1px)"></span></div>
+          <div class="vline"><span>Used <b class="num">${fmt(p.used)}</b></span><span>Fee <b class="num">${fmt(p.fee)}</b></span><span>Possible <b class="num">${fmt(p.poss)}</b></span></div>
+        </button>
+        ${open?`<div class="breakdown">${credits.map(r=>`<div class="brow ${r.u?'':'zero'}"><span class="l">${esc(r.x.name)}</span><span class="num">${fmt(r.u)}<span class="of"> / ${fmt(r.p)}</span></span></div>`).join('')}</div>`:''}
+        </li>`; }).join('')}</ul>
+    </section>
+    <section class="panel">
+      <div class="ptitle"><h2>By month</h2><span class="sub">Month each credit was used</span></div>
+      <div class="legend">${CARDS.map(c=>`<span><span class="dot" style="background:${colorVar(c.id)}"></span>${esc(c.name)}</span>`).join('')}</div>
+      <div class="chart">
+        <div class="bars" id="bars">
+          ${ticks.map(v=>`<div class="gridline" style="bottom:${v/ymax*100}%"><span class="num">$${v}</span></div>`).join('')}
+          ${monthly.map((b,i)=>{ const future = Y===today.y && i+1>today.m; const segs=CARDS.map(c=>b[c.id]>0?`<i style="--c:${colorVar(c.id)};height:calc(${b[c.id]/ymax*100}% - 2px)"></i>`:'').join('');
+            return `<button class="bar ${future?'future':''}" type="button" data-m="${i}" aria-label="${MONTHS_L[i]}: ${fmt(mtot[i])}">${segs}</button>`; }).join('')}
+        </div>
+        <div class="mlabels" aria-hidden="true">${MONTHS.map(m=>`<span>${m}</span>`).join('')}</div>
+      </div>
+      <div class="tooltip" id="tip">${tipHtml(UI.month ?? (Y===today.y?today.m-1:11), monthly, mtot)}</div>
+    </section>`;
+  document.getElementById('prevY').onclick=()=>{UI.vy--; UI.month=null; render();};
+  document.getElementById('nextY').onclick=()=>{ if(UI.vy<today.y){UI.vy++; UI.month=null; render();} };
+  view.querySelectorAll('[data-vc]').forEach(b=>b.addEventListener('click',()=>{ UI.open[b.dataset.vc]=!UI.open[b.dataset.vc]; render(); }));
+  const tip=document.getElementById('tip');
+  view.querySelectorAll('[data-m]').forEach(b=>{
+    const show=()=>{ UI.month=Number(b.dataset.m); tip.innerHTML=tipHtml(UI.month,monthly,mtot); };
+    b.addEventListener('mouseenter',show); b.addEventListener('focus',show); b.addEventListener('click',show);
+  });
+}
+function tipHtml(i,monthly,mtot){
+  const b=monthly[i];
+  return `<div class="tl"><b>${MONTHS_L[i]}</b><b class="num">${fmt(mtot[i])}</b></div>` +
+    CARDS.filter(c=>b[c.id]>0).map(c=>`<div class="tl"><span style="display:inline-flex;gap:6px;align-items:center"><span class="dot" style="background:${colorVar(c.id)}"></span>${esc(c.name)}</span><span class="num">${fmt(b[c.id])}</span></div>`).join('') +
+    (mtot[i]===0?`<div style="color:var(--fg3)">Nothing logged.</div>`:'');
+}
+
+/* ---------- misc ---------- */
+let tt;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,1800); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !scrim.hidden) hideModal(); });
+
+function download(name, text, type){
+  const url=URL.createObjectURL(new Blob([text],{type})), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+const isoDay = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+
+/* ---------- backup: export / import ---------- */
+function exportBackup(){
+  const b={app:'card-credits', version:1, exportedAt:new Date().toISOString(), data:pick(S)};
+  download(`card-credits-backup-${isoDay(new Date())}.json`, JSON.stringify(b,null,2), 'application/json');
+  toast('Backup downloaded');
+}
+function parseBackup(text){
+  const bad=()=>new Error('That file isn’t a Card Credits backup');
+  let j; try{ j=JSON.parse(text); }catch(e){ throw bad(); }
+  const d=j && j.app==='card-credits' && j.data;
+  if(!d || typeof d.log!=='object' || !d.log) throw bad();
+  const out=blank(), obj=v=>v && typeof v==='object' && !Array.isArray(v);
+  if(obj(d.off)) out.off=Object.fromEntries(Object.keys(d.off).filter(k=>d.off[k]).map(k=>[k,true]));
+  if(obj(d.anniv)) for(const c of CARDS.filter(c=>c.anniv)) if(c.id in d.anniv){ const v=d.anniv[c.id]; out.anniv[c.id]= v>=1&&v<=12 ? Number(v) : null; }
+  if(d.rent>=0) out.rent=Number(d.rent);
+  if(d.biltRate>0) out.biltRate=Number(d.biltRate);
+  if(obj(d.fees)) for(const c of CARDS) if(obj(d.fees[c.id])) for(const [y,v] of Object.entries(d.fees[c.id])) if(/^\d{4}$/.test(y) && v>=0) out.fees[c.id][y]=Number(v);
+  for(const [k,e] of Object.entries(d.log)){
+    const card = e && (CARD[e.card] ? e.card : creditOf(k.split('|')[0])?.card);
+    if(!card || !(e.amt>=0) || !/^\d{4}-\d{2}$/.test(e.ym)) throw new Error('The backup has a damaged check-off');
+    out.log[k]={amt:Number(e.amt), face:Number(e.face ?? e.amt), card, ym:e.ym};
+  }
+  return {data:out, at:j.exportedAt ? new Date(j.exportedAt) : null};
+}
+document.getElementById('importFile').addEventListener('change', async ev=>{
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{ confirmImport(parseBackup(await f.text())); }catch(err){ toast(err.message); }
+});
+function confirmImport(b){
+  const n=Object.keys(b.data.log).length, cur=Object.keys(S.log).length;
+  const when = b.at && !isNaN(b.at) ? ` from ${fmtDate(b.at)}${b.at.getFullYear()===today.y?', '+b.at.getFullYear():''}` : '';
+  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="im-t">
+    <div class="grab"></div>
+    <div><div class="eyebrow">Import backup</div><h3 id="im-t">Replace your data?</h3></div>
+    <div class="how"><p>This backup${when} has ${n} check-off${n===1?'':'s'}. It replaces everything in the app now: ${cur} check-off${cur===1?'':'s'} and your settings. A copy of your current data is saved first.</p></div>
+    <div class="btns"><button class="btn" type="button" id="im-cancel">Cancel</button><button class="btn primary" type="button" id="im-go">Replace</button></div>
+  </div>`;
+  showModal();
+  document.getElementById('im-cancel').onclick=hideModal;
+  scrim.onclick=ev=>{ if(ev.target===scrim) hideModal(); };
+  document.getElementById('im-go').onclick=()=>{
+    const batch=writeBatch(db), stamp=new Date().toISOString().slice(0,19).replace(/:/g,'-');
+    batch.set(doc(userRef,'snapshots',`before-import-${stamp}`), {...pick(S), takenAt:serverTimestamp()});
+    batch.set(userRef, {...b.data, ...(S.lastSnapshot?{lastSnapshot:S.lastSnapshot}:{})});
+    batch.commit().catch(err=>{ console.error(err); toast('Couldn’t import that backup'); });
+    S={...b.data, lastSnapshot:S.lastSnapshot};
+    hideModal(); render(); toast('Backup imported');
+  };
+}
+
+/* ---------- monthly snapshot ----------
+   The first time the app opens each month it copies the whole data doc to users/{uid}/snapshots/YYYY-MM. */
+function monthlySnapshot(){
+  const ym=ymStr(today.y,today.m);
+  if(snapTaken || S.lastSnapshot===ym) return;
+  snapTaken=true; S.lastSnapshot=ym;
+  const batch=writeBatch(db);
+  batch.set(doc(userRef,'snapshots',ym), {...pick(S), takenAt:serverTimestamp()});
+  batch.update(userRef, {lastSnapshot:ym});
+  batch.commit().catch(err=>console.error('Monthly snapshot failed', err));
+}
+// Store this year's fee explicitly (carried over from the latest year on file), so changing it later never touches past years
+function ensureFees(){
+  for(const c of CARDS){
+    const f = S.fees[c.id] ||= {};
+    if(f[today.y]==null){ f[today.y]=feeFor(c,today.y); save(['fees',c.id,String(today.y)], f[today.y]); }
+  }
+}
+
+/* ---------- calendar reminders (.ics) ---------- */
+const icsText = t => t.replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+function icsFold(line){ // lines may be at most 75 bytes; continuations start with a space
+  const enc=new TextEncoder(); let out='', n=0;
+  for(const ch of line){ const b=enc.encode(ch).length; if(n+b>75){ out+='\r\n '; n=1; } out+=ch; n+=b; }
+  return out;
+}
+function creditLine(c){
+  const a=amtAt(c,today.y,today.m);
+  return `• ${CARD[c.card].name}: ${c.name}, ${fmt(a)}${c.cash?' Bilt Cash':''}${c.end?` (through ${MONTHS[Number(c.end.slice(5))-1]} ${c.end.slice(0,4)})`:''}`;
+}
+function downloadCalendar(){
+  const d=new Date(), stamp=d.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z', url=location.href.split('#')[0];
+  const live=CREDITS.filter(c=>isOn(c) && (!c.end || c.end>=ymStr(today.y,today.m)));
+  const next25 = new Date(d.getFullYear(), d.getMonth() + (d.getDate()>25?1:0), 25);
+  const nextHalf = d.getMonth()<5 ? new Date(d.getFullYear(),5,1) : d.getMonth()<11 ? new Date(d.getFullYear(),11,1) : new Date(d.getFullYear()+1,5,1);
+  const event=(uid,start,rule,title,body)=>{
+    const end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+1);
+    return ['BEGIN:VEVENT',`UID:${uid}@card-credits`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${isoDay(start)}`,`DTEND;VALUE=DATE:${isoDay(end)}`,
+      `RRULE:${rule}`,`SUMMARY:${icsText(title)}`,`DESCRIPTION:${icsText(body)}`,`URL:${url}`,'TRANSP:TRANSPARENT',
+      'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsText(title)}`,'TRIGGER:PT9H','END:VALARM','END:VEVENT'];
+  };
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Card Credits//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Card Credits',
+    ...event('monthly-credits', next25, 'FREQ=MONTHLY;BYMONTHDAY=25', 'Use this month’s card credits',
+      `Monthly credits reset on the 1st:\n${live.filter(c=>c.freq==='month').map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
+    ...event('half-year-credits', nextHalf, 'FREQ=YEARLY;BYMONTH=6,12;BYMONTHDAY=1', 'Six-month card credits reset soon',
+      `These reset on July 1 and January 1:\n${live.filter(c=>c.freq==='half').map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
+    'END:VCALENDAR'];
+  download('card-credits-reminders.ics', lines.map(icsFold).join('\r\n')+'\r\n', 'text/calendar');
+  toast('Calendar file downloaded');
+}
+
+/* ---------- sign-in and sync ---------- */
+const nav=document.querySelector('nav.tabs');
+function showMessage(msg){ view.innerHTML=`<div class="panel"><div class="empty">${esc(msg)}</div></div>`; }
+function showSignIn(){
+  nav.hidden=true; document.getElementById('title').textContent='Card Credits'; document.getElementById('topright').textContent='';
+  view.innerHTML=`<section class="panel"><form class="signin" id="signin">
+    <p class="note" style="margin:0">Sign in to see your credits. After that, this device keeps a copy so the app works without signal.</p>
+    <label for="si-email">Email</label><input class="search" id="si-email" type="email" autocomplete="username" required>
+    <label for="si-pass">Password</label><input class="search" id="si-pass" type="password" autocomplete="current-password" required>
+    <p class="err" id="si-err" hidden></p>
+    <button class="btn primary" type="submit" id="si-go">Sign in</button>
+  </form></section>`;
+  const form=document.getElementById('signin'), err=document.getElementById('si-err'), go=document.getElementById('si-go');
+  form.addEventListener('submit', async ev=>{
+    ev.preventDefault(); err.hidden=true; go.disabled=true; go.textContent='Signing in…';
+    try{ await signInWithEmailAndPassword(auth, document.getElementById('si-email').value.trim(), document.getElementById('si-pass').value); }
+    catch(e){
+      err.textContent = {'auth/invalid-credential':'That email and password don’t match.','auth/invalid-email':'That email address isn’t valid.',
+        'auth/too-many-requests':'Too many tries. Wait a few minutes and try again.','auth/network-request-failed':'No connection. Signing in needs signal the first time.'}[e.code] || 'Couldn’t sign in. Try again.';
+      err.hidden=false; go.disabled=false; go.textContent='Sign in';
+    }
+  });
+}
+// Re-render for changes from another device, but not while the user is typing in a field or has a sheet open
+function refresh(){
+  const a=document.activeElement;
+  if(!scrim.hidden || (a && view.contains(a) && /^(INPUT|SELECT)$/.test(a.tagName))) return;
+  render();
+}
+function subscribe(uid){
+  userRef=doc(db,'users',uid);
+  unsub=onSnapshot(userRef, snap=>{
+    if(!snap.exists()){
+      if(snap.metadata.fromCache) return;   // could be a new device that's offline; wait for the server before creating anything
+      setDoc(userRef, blank()).catch(err=>{ console.error(err); showMessage('Couldn’t create your data. Check the Firestore rules in the README.'); });
+      return;
+    }
+    const first=!S;
+    S=Object.assign(blank(), snap.data());
+    if(first){
+      ensureFees(); monthlySnapshot(); nav.hidden=false;
+      const start=(location.hash||'').slice(1); setTab(tabs.includes(start)?start:'tracker');
+    } else if(!snap.metadata.hasPendingWrites) refresh();
+  }, err=>{ console.error(err); showMessage(err.code==='permission-denied' ? 'Firestore refused access. Check that the security rules have your user ID (see the README).' : 'Couldn’t load your data. Try again in a moment.'); });
+}
+async function doSignOut(){
+  if(unsub){ unsub(); unsub=null; }
+  await signOut(auth);
+  try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){} // remove this device's offline copy
+  location.reload();
+}
+onAuthStateChanged(auth, user=>{
+  if(unsub){ unsub(); unsub=null; }
+  USER=user; S=null; snapTaken=false; hideModalIfOpen();
+  if(!user){ showSignIn(); return; }
+  nav.hidden=true; showMessage('Loading your credits…'); subscribe(user.uid);
+});
+function hideModalIfOpen(){ if(!scrim.hidden) hideModal(); }
+showMessage('Loading…');
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(err=>console.error('Service worker failed', err));
+</script>
+</body>
+</html>
