@@ -218,20 +218,6 @@ button:has(> label.hap){position:relative}
 label.hap{position:absolute;inset:0;z-index:1;border-radius:inherit;-webkit-user-select:none;user-select:none}
 label.hap > input{position:absolute;left:0;top:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
 button:disabled > label.hap{display:none}
-/* credit catalog: review queue, verify badges, edit forms */
-.rrow{display:flex;align-items:center;gap:10px;width:100%;padding:14px 16px;font-weight:600;text-align:left}
-.rrow span:first-child{flex:1}
-.vtag{color:var(--warn);font-size:13px;font-weight:600}
-.pill.vb{font-size:11px;padding:1px 7px;margin-left:4px;vertical-align:1px}
-.vinfo{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--fg2)}
-.vinfo a,.perk a{color:var(--fg);font-weight:600;text-underline-offset:3px}
-.form{display:flex;flex-direction:column;gap:12px}
-.form label{font-size:13px;font-weight:600;color:var(--fg2);margin-bottom:-6px}
-textarea.search{resize:vertical;line-height:1.4}
-/* iOS gives date inputs an intrinsic minimum width, so they overflow narrow screens; this lets width:100% apply */
-input[type="date"].search{-webkit-appearance:none;appearance:none;display:block;min-width:0;min-height:44px;text-align:left}
-input[type="date"].search::-webkit-date-and-time-value{text-align:left}
-.brow .of{color:var(--fg3)}
 /* sign-in */
 .signin{display:flex;flex-direction:column;gap:12px;padding:16px}
 .signin label{font-size:13px;font-weight:600;color:var(--fg2);margin-bottom:-6px}
@@ -263,9 +249,7 @@ input[type="date"].search::-webkit-date-and-time-value{text-align:left}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc, updateDoc, writeBatch,
-  deleteField, FieldPath, serverTimestamp, terminate, clearIndexedDbPersistence, collection, query, orderBy, limit, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import * as calc from './calc.js';
-import { migrateToCatalog, SCHEMA_VERSION, SEED_CREDITS, problemWith, planApproval, makeProposal, proposalsFromEdit, idForNewCredit, cleanCredit, cleanProposal } from './catalog.js';
+  deleteField, FieldPath, serverTimestamp, terminate, clearIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const firebaseConfig = {
   apiKey: "AIzaSyBzbzpEuzzHFLi5aWoHkwWoUebtF7b4Paw",
   authDomain: "card-credits.firebaseapp.com",
@@ -364,13 +348,59 @@ const CARDS = [
 ];
 const CARD = Object.fromEntries(CARDS.map(c=>[c.id,c]));
 
-/* ---------- credit catalog ----------
-   Credits live in Firestore at users/{uid}/credits, one document per credit (see catalog.js). The
-   hardcoded list that used to be here is now catalog-seed.js, used once to seed the catalog. */
-let CAT = {};            // credit ID → credit (with its id)
-let CREDIT_LIST = [];    // the same, in sortOrder
-let PROPS = [];          // review-queue proposals, newest first
-let RUNS = [];           // the automated checker's recent runs, newest first
+const CREDITS = [
+  {id:'csr-travel', card:'csr', name:'Travel credit', freq:'year', resetOn:'anniv', amt:300,
+    how:'Applies automatically to almost any purchase that codes as travel.',
+    info:['Resets on your card anniversary (May 1), not January 1.','No portal or activation needed. The statement credit posts a few days after the charge.','Counts for: airlines, hotels and motels, car rentals, cruise lines, travel agencies and booking sites, timeshares, campgrounds, trains, buses, taxis and rideshare (Uber, Lyft), limousines, ferries, public transit, tolls, and parking lots and garages.','Doesn’t count: airline gift cards, in-flight purchases, or merchants that sell travel inside another store.']},
+  {id:'csr-dd-r', card:'csr', name:'DoorDash restaurant promo', freq:'month', amts:[{from:'2000-01',amt:5},{from:'2026-10',amt:15}],
+    how:'A promo in the DoorDash app for one restaurant order a month.',
+    info:['Needs the complimentary DashPass membership that comes with the card. Activate it first.','Pay with Sapphire Reserve. The promo applies at checkout; it isn’t a statement credit.','It was $5 a month through September 2026 and is $15 from October.','Unused promos don’t roll over to the next month.']},
+  {id:'csr-dd-a', card:'csr', name:'DoorDash non-restaurant promo', freq:'month', amt:10,
+    how:'A promo for a grocery, convenience or retail order on DoorDash.',
+    info:['Not for restaurant orders. Use it on grocery, convenience, pharmacy or retail stores in DoorDash.','You get two of these $10 promos each month, one per order.','Needs DashPass activated and Sapphire Reserve as the payment method.','Doesn’t roll over.']},
+  {id:'csr-dd-b', card:'csr', name:'DoorDash non-restaurant promo, second', freq:'month', amt:10,
+    how:'The second $10 non-restaurant DoorDash promo for the month.',
+    info:['Same rules as the first: grocery, convenience or retail orders only, DashPass active, paid with Sapphire Reserve.','Each promo is for a separate order.']},
+  {id:'csr-lyft', card:'csr', name:'Lyft credit', freq:'month', amt:10, end:'2027-09',
+    how:'$10 in Lyft credit each month through September 2027.',
+    info:['Set Sapphire Reserve as your Lyft payment method.','The credit shows up in the Lyft app and is used on your next ride.','Rides also earn 5x points on the card.','Doesn’t roll over.']},
+  {id:'csr-peloton', card:'csr', name:'Peloton credit', freq:'month', amt:10,
+    how:'Up to $10 a month toward a Peloton membership.',
+    info:['Only for a Peloton membership billed to Sapphire Reserve.','Equipment and apparel don’t count.']},
+  {id:'csr-tables', card:'csr', name:'Exclusive Tables dining', freq:'half', amt:150,
+    how:'Only at the select restaurants in Chase’s Sapphire Reserve Exclusive Tables list on OpenTable.',
+    info:['Find the restaurants first: open the OpenTable app and look up the Sapphire Reserve Exclusive Tables list. Only those restaurants count.','Book through OpenTable and pay the bill with Sapphire Reserve.','$150 for January–June and $150 for July–December. Unused money doesn’t carry over.']},
+  {id:'csr-stubhub', card:'csr', name:'StubHub credit', freq:'half', amt:150,
+    how:'For tickets bought on StubHub or viagogo.',
+    info:['Activation required in your Chase account first.','$150 for January–June and $150 for July–December.','Pay with Sapphire Reserve.']},
+  {id:'csr-edit1', card:'csr', name:'The Edit hotel credit', freq:'year', amt:250,
+    how:'Only for hotels in The Edit collection, booked through Chase Travel.',
+    info:['Must be booked through the Chase Travel portal. Booking the same hotel directly won’t trigger it.','Only hotels in The Edit collection qualify, and only on prepaid rates.','Stays need to be two nights or more.','Two $250 credits per calendar year. These bookings also earn 8x points.']},
+  {id:'csr-edit2', card:'csr', name:'The Edit hotel credit, second', freq:'year', amt:250,
+    how:'The second $250 credit for The Edit this year.',
+    info:['Same rules as the first: The Edit hotels, booked and prepaid through Chase Travel, two nights or more.']},
+  {id:'csr-select', card:'csr', name:'Select Hotels credit', freq:'year', amt:250, start:'2026-01', end:'2026-12',
+    how:'A 2026-only hotel credit, booked through Chase Travel.',
+    info:['Must be booked through the Chase Travel portal.','Only participating hotel brands qualify. Check eligibility on the hotel listing in Chase Travel before you book.','Prepaid stays of two nights or more.','Ends December 31, 2026.']},
+  {id:'gold-uber', card:'gold', name:'Uber Cash', freq:'month', amt:10,
+    how:'$10 lands in your Uber account on the 1st of each month.',
+    info:['Add the Gold Card to your Uber account to receive it.','Works on U.S. rides or Uber Eats orders. Pick an Amex card at checkout.','Expires at the end of the month. It doesn’t roll over.']},
+  {id:'gold-dining', card:'gold', name:'Dining credit', freq:'month', amt:10,
+    how:'Only at Amex’s dining partners, not at any restaurant.',
+    info:['Partners: Grubhub (including Seamless), The Cheesecake Factory, Buffalo Wild Wings, Wonder and Five Guys.','Amex changes this list from time to time. Goldbelly and Wine.com were dropped in 2026.','Enrollment required in the Amex app.','$10 a month, no rollover.']},
+  {id:'gold-dunkin', card:'gold', name:'Dunkin’ credit', freq:'month', amt:7,
+    how:'Up to $7 a month at U.S. Dunkin’ locations.',
+    info:['Enrollment required in the Amex app.','Pay with the Gold Card. Loading a Dunkin’ gift card may not count.','No rollover.']},
+  {id:'gold-resy', card:'gold', name:'Resy credit', freq:'half', amt:50,
+    how:'Dine at a U.S. restaurant that’s on Resy and pay with the Gold Card.',
+    info:['The restaurant has to be on Resy, but you don’t have to book through Resy.','Enrollment required.','$50 for January–June and $50 for July–December.']},
+  {id:'bilt-hotel', card:'bilt', name:'Bilt Travel hotel credit', freq:'half', amt:200,
+    how:'Book through the Bilt Travel portal. Any hotel listed there qualifies.',
+    info:['Must be booked through the Bilt Travel portal in the Bilt app.','Any hotel on the portal works.','$200 for January–June and $200 for July–December, as statement credits.']},
+  {id:'bilt-cash', card:'bilt', name:'Bilt Cash', freq:'year', resetOn:'anniv', amt:200, cash:true,
+    how:'$200 of Bilt Cash on each account anniversary.',
+    info:['Bilt Cash isn’t worth a dollar per dollar. $1 of Bilt Cash converts to 33.33 Bilt Points, which are worth about 33¢ to 66¢ depending on how you redeem them.','Some swaps are close to face value (for example, Grubhub credit), but most aren’t.','It’s also what unlocks your rent points: 1 point per rent dollar takes 3% of your rent in Bilt Cash.','Balances over $100 expire at the end of each calendar year.','The Value tab counts it at the rate you set on the Palladium card page.']}
+];
 const FREQ = {month:'Monthly', half:'Every six months', year:'Yearly'};
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTHS_L = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -393,10 +423,10 @@ const GUIDE = [
 
 /* ---------- state ----------
    Everything lives in one Firestore doc, users/{uid}. Each check-off in S.log keeps its own dollar
-   amount (amt), the credit's full amount for that period (face) and its card, so editing a credit
+   amount (amt), the credit's full amount for that period (face) and its card, so editing CREDITS
    later never rewrites history. Annual fees are stored per card per year in S.fees. */
 const DATA_KEYS = ['off','anniv','rent','biltRate','fees','log'];
-let S = null, USER = null, userRef = null, subs = [], snapTaken = false;
+let S = null, USER = null, userRef = null, unsub = null, snapTaken = false;
 const DEL = 'delete';   // pass as a value to save() to remove the field
 function blank(){ return {log:{}, off:{'csr-peloton':true}, anniv:{csr:5,bilt:null}, rent:1811, biltRate:0.5,
   fees:Object.fromEntries(CARDS.map(c=>[c.id,{...c.fee}]))}; }
@@ -452,27 +482,54 @@ const ymStr=(y,m)=>`${y}-${pad(m)}`;
 const today = {y:NOW.getFullYear(), m:NOW.getMonth()+1};
 const fmt = n => '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2, maximumFractionDigits:2});
 
-/* Period and amount rules live in calc.js; these wrap them with the user's settings. */
-const ctx = () => ({anniv:S.anniv, off:S.off, biltRate:S.biltRate});
-const TODAY_ISO = calc.iso(today.y, today.m, NOW.getDate());
-const period = (c,y,m) => calc.periodAt(c,y,m,ctx());
-const amountAt = (c,y,m) => calc.amountFor(c, period(c,y,m));
-const asDate = d => new Date(+d.slice(0,4), +d.slice(5,7)-1, +d.slice(8,10));
-const periodEnd = (c,y,m) => asDate(period(c,y,m).next);   // the date the credit resets
+function amtAt(c, y, m){
+  if(!c.amts) return c.amt;
+  const k=ymStr(y,m); let a=c.amts[0].amt;
+  for(const h of c.amts){ if(h.from<=k) a=h.amt; }
+  return a;
+}
+function activeAt(c,y,m){
+  const k=ymStr(y,m);
+  if(c.start && k<c.start) return false;
+  if(c.end && k>c.end) return false;
+  return true;
+}
+function annivMonth(c){ return (c.resetOn==='anniv' && CARD[c.card].anniv) ? S.anniv[c.card] : null; }
+function periodKey(c,y,m){
+  if(c.freq==='month') return ymStr(y,m);
+  if(c.freq==='half') return `${y}-H${m<=6?1:2}`;
+  const a=annivMonth(c);
+  if(a){ const sy = m>=a ? y : y-1; return `CY${sy}-${pad(a)}`; }
+  return String(y);
+}
+function periodEnd(c,y,m){ // date the credit resets (first day of next period)
+  if(c.freq==='month') return new Date(y, m, 1);
+  if(c.freq==='half') return m<=6 ? new Date(y,6,1) : new Date(y+1,0,1);
+  const a=annivMonth(c);
+  if(a){ const sy = m>=a ? y : y-1; return new Date(sy+1, a-1, 1); }
+  return new Date(y+1,0,1);
+}
 const fmtDate = d => `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear()!==today.y?', '+d.getFullYear():''}`;
-const fmtIso = d => fmtDate(asDate(d));
-const entry = (c,y,m) => S.log[`${c.id}|${period(c,y,m).key}`];
+const entry = (c,y,m) => S.log[`${c.id}|${periodKey(c,y,m)}`];
 const isOn = c => !S.off[c.id];
-const isCash = c => c?.valuation==='biltCash';
 
-/* ---------- value math (all totals come from calc.js) ---------- */
-const creditOf = id => CAT[id] || null;
-const worth = (c, amt) => calc.valueOf(c, amt, ctx());
+/* ---------- value math ---------- */
+const creditOf = id => CREDITS.find(x=>x.id===id);
+const worth = (c, amt) => c?.cash ? amt*(S.biltRate ?? 0.5) : amt;
 const mkEntry = (c, amt, face, ym) => ({amt, face, card:c.card, ym});
-const annualValue = cardId => calc.cardPossible(CREDIT_LIST, cardId, today.y, ctx());
-// A card page lists the credits active this year or later; ended ones from earlier years drop off
-const cardCredits = cardId => CREDIT_LIST.filter(c=>c.card===cardId && (!c.activeTo || c.activeTo >= calc.iso(today.y,1,1)));
-const isStale = c => calc.isStale(c, RUNS, TODAY_ISO);
+function usedInYear(cardId, Y){
+  let t=0; for(const [k,e] of Object.entries(S.log)){ if(e.card===cardId&&e.ym.startsWith(Y+'-')) t+=worth(creditOf(k.split('|')[0]),e.amt); } return t;
+}
+function usedByCredit(c, Y){
+  let t=0; for(const [k,e] of Object.entries(S.log)){ if(k.split('|')[0]===c.id && e.ym.startsWith(Y+'-')) t+=worth(c,e.amt); } return t;
+}
+function possibleByCredit(c, Y){
+  if(!isOn(c)) return 0;
+  if(c.freq==='month'){ let t=0; for(let m=1;m<=12;m++) if(activeAt(c,Y,m)) t+=amtAt(c,Y,m); return t; }
+  if(c.freq==='half'){ let t=0; if(activeAt(c,Y,1)) t+=amtAt(c,Y,1); if(activeAt(c,Y,7)) t+=amtAt(c,Y,7); return t; }
+  return activeAt(c,Y,12)||activeAt(c,Y,1) ? worth(c,amtAt(c,Y,12)) : 0;
+}
+function annualValue(cardId){ return CREDITS.filter(c=>c.card===cardId).reduce((t,c)=>t+possibleByCredit(c,today.y),0); }
 // Fee on file for year Y, else the closest earlier year, else the earliest year on file
 function feeFor(card,Y){
   const f=S.fees[card.id]||card.fee, ys=Object.keys(f).map(Number).sort((a,b)=>a-b);
@@ -481,7 +538,7 @@ function feeFor(card,Y){
 }
 
 /* ---------- ui state ---------- */
-const UI = { tab:'tracker', cardDetail:null, review:false, histOpen:false, confirmAll:false, ty:today.y, tm:today.m, filter:'all', vy:today.y, open:{}, month:null, q:'' };
+const UI = { tab:'tracker', cardDetail:null, ty:today.y, tm:today.m, filter:'all', vy:today.y, open:{}, month:null, q:'' };
 const tabs = ['cards','tracker','guide','value'];
 const h = (s)=>s; // template helper marker
 const esc = s => String(s).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
@@ -489,7 +546,7 @@ const colorVar = id => `var(--${id})`;
 const view = document.getElementById('view');
 
 function setTab(t){
-  UI.tab=t; UI.cardDetail=null; UI.review=false; UI.confirmAll=false;
+  UI.tab=t; UI.cardDetail=null;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current', b.dataset.tab===t?'page':'false'));
   render(); window.scrollTo(0,0);
 }
@@ -497,7 +554,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('clic
 
 function render(){
   const titles={cards:'Cards',tracker:'Tracker',guide:'Best card',value:'Value'};
-  document.getElementById('title').textContent = UI.tab==='cards' && UI.review ? 'Review changes' : UI.cardDetail ? CARD[UI.cardDetail].name : titles[UI.tab];
+  document.getElementById('title').textContent = UI.cardDetail ? CARD[UI.cardDetail].name : titles[UI.tab];
   document.getElementById('topright').textContent = UI.tab==='value' ? String(UI.vy) : (UI.tab==='tracker'?'':'');
   ({cards:renderCards, tracker:renderTracker, guide:renderGuide, value:renderValue})[UI.tab]();
 }
@@ -510,16 +567,12 @@ function art(c){
 
 /* ---------- tab 1: cards ---------- */
 function renderCards(){
-  if(UI.review) return renderReview();
   if(UI.cardDetail) return renderCardDetail(CARD[UI.cardDetail]);
-  const pending=reviewItems().length;
-  view.innerHTML = `${pending?`<button class="panel rrow" type="button" id="review"><span>Review changes</span><span class="pill warn num">${pending}</span><span aria-hidden="true">›</span></button>`:''}
-    <div class="cardlist">${CARDS.map(c=>{ const st=cardCredits(c.id).filter(isStale).length; return `
+  view.innerHTML = `<div class="cardlist">${CARDS.map(c=>`
     <button class="cardtile" type="button" data-card="${c.id}" aria-label="${esc(c.issuer+' '+c.name)} details">
       ${art(c)}
       <div class="meta"><span>Annual fee <b class="num">${fmt(feeFor(c,today.y))}</b></span><span>Credits <b class="num">${fmt(annualValue(c.id))}</b>/yr</span></div>
-      ${st?`<div class="meta"><span class="vtag">${st} credit${st===1?'':'s'} to verify</span></div>`:''}
-    </button>`; }).join('')}</div>
+    </button>`).join('')}</div>
     <section class="panel">
       <div class="ptitle"><h2>Backup and reminders</h2></div>
       <div class="field"><div>Backup file<small>${S.lastSnapshot?`A copy is also saved automatically each month. Latest: ${MONTHS_L[Number(S.lastSnapshot.slice(5))-1]} ${S.lastSnapshot.slice(0,4)}.`:'A copy is also saved automatically each month.'}</small></div></div>
@@ -529,14 +582,13 @@ function renderCards(){
       <div class="field" style="border-top:1px solid var(--line)"><div>Signed in<small>${esc(USER.email||'')}</small></div><button class="btn" type="button" id="out">Sign out</button></div>
     </section>`;
   view.querySelectorAll('[data-card]').forEach(b=>b.addEventListener('click',()=>{UI.cardDetail=b.dataset.card; render(); window.scrollTo(0,0);}));
-  const rv=document.getElementById('review'); if(rv) rv.addEventListener('click',()=>{ UI.review=true; UI.confirmAll=false; render(); window.scrollTo(0,0); });
   document.getElementById('exp').addEventListener('click',exportBackup);
   document.getElementById('imp').addEventListener('click',()=>document.getElementById('importFile').click());
   document.getElementById('ics').addEventListener('click',downloadCalendar);
   document.getElementById('out').addEventListener('click',doSignOut);
 }
 function renderCardDetail(c){
-  const credits=cardCredits(c.id), stale=credits.filter(isStale);
+  const credits=CREDITS.filter(x=>x.card===c.id);
   const fee=feeFor(c,today.y), val=annualValue(c.id);
   const groups=['month','half','year'].map(f=>({f,list:credits.filter(x=>x.freq===f)})).filter(g=>g.list.length);
   const monthOpts = ['<option value="">Not set (uses Jan 1)</option>'].concat(MONTHS_L.map((n,i)=>`<option value="${i+1}" ${S.anniv[c.id]===i+1?'selected':''}>${n}</option>`)).join('');
@@ -551,14 +603,13 @@ function renderCardDetail(c){
     <section class="panel">
       <div class="field"><div><label for="fee-in">Annual fee for ${today.y}</label><small>Saved for ${today.y} only. Past years keep their own fee.</small></div>
         <div class="amtin"><span>$</span><input id="fee-in" type="number" inputmode="decimal" min="0" step="1" value="${fee}"></div></div>
-      ${c.anniv?`<div class="field" style="border-top:1px solid var(--line)"><div><label for="anniv-${c.id}">Card anniversary month</label><small>${esc(annivHint(c.id))}</small></div><select id="anniv-${c.id}">${monthOpts}</select></div>`:''}
+      ${c.anniv?`<div class="field" style="border-top:1px solid var(--line)"><div><label for="anniv-${c.id}">Card anniversary month</label><small>${c.id==='csr'?'The $300 travel credit resets on this date.':'Your $200 Bilt Cash arrives on this date.'}</small></div><select id="anniv-${c.id}">${monthOpts}</select></div>`:''}
     </section>
     ${c.id==='bilt'?rentPanel():''}
     <section class="panel">
       <div class="ptitle"><h2>Statement credits</h2><span class="sub">Turn off any you won’t use</span></div>
       ${groups.map(g=>`<div class="ptitle" style="padding-top:10px"><span class="eyebrow">${FREQ[g.f]}</span></div>
-        <ul class="rows">${g.list.map(x=>`<li><div class="crow ${isOn(x)?'':'off'}"><div class="d"><div class="n">${esc(x.name)}${isStale(x)?' <span class="pill warn vb">Verify</span>':''}</div><small>${esc(creditSub(x))}</small></div><span class="amt num">${isCash(x)?'≈ ':''}${fmt(worth(x,amountAt(x,today.y,today.m)))}</span>${ibtn(x)}<button class="switch" type="button" role="switch" id="sw-${x.id}" aria-label="Track ${esc(x.name)}" aria-checked="${isOn(x)}" data-sw="${x.id}"></button></div></li>`).join('')}</ul>`).join('')}
-      <div class="btns" style="padding:6px 16px 14px">${stale.length?`<button class="btn" type="button" id="verify-all">Verify all</button>`:''}<button class="btn" type="button" id="add-credit">Add credit</button></div>
+        <ul class="rows">${g.list.map(x=>`<li><div class="crow ${isOn(x)?'':'off'}"><div class="d"><div class="n">${esc(x.name)}</div><small>${esc(creditSub(x))}</small></div><span class="amt num">${x.cash?'≈ ':''}${fmt(worth(x,amtAt(x,today.y,today.m)))}</span>${ibtn(x)}<button class="switch" type="button" role="switch" id="sw-${x.id}" aria-label="Track ${esc(x.name)}" aria-checked="${isOn(x)}" data-sw="${x.id}"></button></div></li>`).join('')}</ul>`).join('')}
     </section>
     <section class="panel">
       <div class="ptitle"><h2>Earn rates</h2><span class="sub">${esc(c.points)}</span></div>
@@ -571,8 +622,6 @@ function renderCardDetail(c){
     </section>`;
   document.getElementById('back').addEventListener('click',()=>{UI.cardDetail=null; render();});
   bindInfo();
-  const va=document.getElementById('verify-all'); if(va) va.addEventListener('click',()=>{ markVerified(credits.map(x=>x.id)); render(); });
-  document.getElementById('add-credit').addEventListener('click',()=>openAddForm(c.id));
   const bsel=document.getElementById('bilt-rate');
   if(bsel) bsel.addEventListener('change',()=>{ S.biltRate=Number(bsel.value); save(['biltRate'],S.biltRate); render(); toast('Bilt Cash value updated'); });
   const rin=document.getElementById('rent-in');
@@ -586,21 +635,14 @@ function renderCardDetail(c){
 let rentT;
 /* Bilt rent math: $1 Bilt Cash = 33.33 points, so 1 point per rent dollar costs 3% of rent in Bilt Cash */
 const PTS_PER_CASH = 33.33;
-// This year's Bilt Cash credit, from the catalog
-function biltCashAmount(){ const c=CREDIT_LIST.find(x=>x.card==='bilt' && isCash(x) && calc.overlaps(x, period(x,today.y,today.m))); return c ? amountAt(c,today.y,today.m) : 0; }
-function annivHint(cardId){
-  const c=cardCredits(cardId).find(x=>x.resetOn==='anniversary'); if(!c) return '';
-  const a=amountAt(c,today.y,today.m);
-  return isCash(c) ? `Your ${fmt(a)} ${c.name} arrives on this date.` : `The ${fmt(a)} ${c.name.toLowerCase()} resets on this date.`;
-}
-function rentMath(rent){ const cash=rent/PTS_PER_CASH; return {cash, spend:cash/0.04, pts:Math.round(rent), yearCash:cash*12, creditMonths:biltCashAmount()/(cash||1)}; }
+function rentMath(rent){ const cash=rent/PTS_PER_CASH; return {cash, spend:cash/0.04, pts:Math.round(rent), yearCash:cash*12, creditMonths:200/(cash||1)}; }
 function rentTip(){ const r=rentMath(S.rent||0); return S.rent ? `1 point per dollar only when backed by Bilt Cash. Your ${fmt(S.rent)} rent needs ${fmt(Math.ceil(r.cash*100)/100)} of Bilt Cash a month, which about ${fmt(Math.ceil(r.spend))} of Palladium spend earns at 4%.` : '1 point per dollar only when backed by Bilt Cash.'; }
 function rentRows(){
   const r=rentMath(S.rent||0);
   return `<div class="brow"><span class="l">Bilt Cash needed each month</span><span class="num">${fmt(Math.ceil(r.cash*100)/100)}</span></div>
     <div class="brow"><span class="l">Card spend to earn that at 4%</span><span class="num">${fmt(Math.ceil(r.spend))}</span></div>
     <div class="brow"><span class="l">Rent points unlocked each month</span><span class="num">${r.pts.toLocaleString('en-US')}</span></div>
-    <div class="brow"><span class="l">Months the ${fmt(biltCashAmount())} Bilt Cash credit covers</span><span class="num">${S.rent?r.creditMonths.toFixed(1):'—'}</span></div>`;
+    <div class="brow"><span class="l">Months the $200 Bilt Cash credit covers</span><span class="num">${S.rent?r.creditMonths.toFixed(1):'—'}</span></div>`;
 }
 function rentPanel(){
   return `<section class="panel">
@@ -612,21 +654,18 @@ function rentPanel(){
       <select id="bilt-rate">${[[0.33,'33¢ (1¢ per point)'],[0.4,'40¢'],[0.5,'50¢ (1.5¢ per point)'],[0.6,'60¢'],[0.66,'66¢ (2¢ per point)']].map(([v,l])=>`<option value="${v}" ${(S.biltRate??0.5)===v?'selected':''}>${l}</option>`).join('')}</select></div>
   </section>`;
 }
-const monthYear = d => `${MONTHS[+d.slice(5,7)-1]} ${d.slice(0,4)}`;
 function creditSub(x){
-  if(x.activeFrom > TODAY_ISO) return `Starts ${fmtIso(x.activeFrom)}`;
-  if(x.freq==='month') return x.activeTo ? `Every month through ${monthYear(x.activeTo)}` : 'Every month';
-  if(x.freq==='half') return x.activeTo ? `Jan–Jun and Jul–Dec, through ${monthYear(x.activeTo)}` : 'Jan–Jun and Jul–Dec';
-  if(x.activeTo && x.activeFrom.slice(0,4)===x.activeTo.slice(0,4)) return `${x.activeFrom.slice(0,4)} only`;
-  if(x.activeTo) return `Ends ${fmtIso(x.activeTo)}`;
-  return x.resetOn==='anniversary' ? 'Resets on card anniversary' : 'Resets Jan 1';
+  if(x.freq==='month') return x.end ? `Every month through ${MONTHS[Number(x.end.slice(5))-1]} ${x.end.slice(0,4)}` : 'Every month';
+  if(x.freq==='half') return 'Jan–Jun and Jul–Dec';
+  if(x.start && x.end && x.start.slice(0,4)===x.end.slice(0,4)) return `${x.start.slice(0,4)} only`;
+  return x.resetOn==='anniv' ? 'Resets on card anniversary' : 'Resets Jan 1';
 }
 
 /* ---------- tab 2: tracker ---------- */
 function renderTracker(){
   const y=UI.ty, m=UI.tm;
   const isCurrent = y===today.y && m===today.m;
-  const rows = calc.trackerRows(CREDIT_LIST.filter(c=>UI.filter==='all'||c.card===UI.filter), y, m, ctx(), S.log);
+  const list = CREDITS.filter(c=>isOn(c) && activeAt(c,y,m) && (UI.filter==='all'||c.card===UI.filter));
   const halfLabel = m<=6?'Jan–Jun':'Jul–Dec';
   const sections = [
     {f:'month', title:'Monthly', sub:`Resets ${fmtDate(new Date(y,m,1))}`},
@@ -645,14 +684,14 @@ function renderTracker(){
       ${CARDS.map(c=>`<button type="button" data-f="${c.id}" aria-pressed="${UI.filter===c.id}"><span class="dot" style="background:${colorVar(c.id)}"></span>${esc(c.name)}</button>`).join('')}
     </div>
     ${sections.map(sec=>{
-      const items=rows.filter(r=>r.c.freq===sec.f);
+      const items=list.filter(c=>c.freq===sec.f);
       if(!items.length) return '';
-      const {used,total}=calc.sectionTotals(items, ctx());
+      let used=0,total=0; items.forEach(c=>{ const e=entry(c,y,m), a=e?.face ?? amtAt(c,y,m); total+=worth(c,a); if(e) used+=worth(c,Math.min(e.amt,a)); });
       return `<section class="panel">
         <div class="ptitle"><h2>${sec.title}</h2><span class="sub"><span class="num">${fmt(used)}</span> of <span class="num">${fmt(total)}</span></span></div>
         <div class="ptitle" style="padding-top:0"><span class="sub" style="text-align:left">${sec.sub}</span></div>
         <div class="prog" aria-hidden="true"><i style="width:${total?Math.round(used/total*100):0}%"></i></div>
-        <ul class="rows">${items.map(r=>trow(r.c,y,m)).join('')}</ul>
+        <ul class="rows">${items.map(c=>trow(c,y,m)).join('')}</ul>
       </section>`;
     }).join('') || `<div class="panel"><div class="empty">No credits for this card this month.</div></div>`}`;
   document.getElementById('prevM').addEventListener('click',()=>{ if(--UI.tm<1){UI.tm=12;UI.ty--;} render(); });
@@ -663,25 +702,25 @@ function renderTracker(){
   bindInfo();
 }
 function trow(c,y,m){
-  const e=entry(c,y,m), a=e?.face ?? amountAt(c,y,m), card=CARD[c.card];
+  const e=entry(c,y,m), a=e?.face ?? amtAt(c,y,m), card=CARD[c.card];
   const done = e && e.amt>=a, part = e && e.amt<a;
   const end=periodEnd(c,y,m), days=Math.ceil((end-NOW)/86400000);
   const soon = !e && days>0 && days<=7;
   let sub = c.freq==='year' ? `${card.name} · resets ${fmtDate(end)}` : card.name;
   if(soon) sub = `${card.name} · expires in ${days} day${days===1?'':'s'}`;
   if(e && e.ym!==ymStr(y,m) && c.freq!=='month') sub = `${card.name} · used in ${MONTHS[Number(e.ym.slice(5))-1]}`;
-  if(isCash(c)) sub = `${fmt(a)} Bilt Cash · ` + sub.replace(card.name+' · ','').replace(card.name,'resets '+fmtDate(end));
+  if(c.cash) sub = `${fmt(a)} Bilt Cash · ` + sub.replace(card.name+' · ','').replace(card.name,'resets '+fmtDate(end));
   return `<li><div class="trow ${done?'done':''} ${part?'part':''}" style="--c:${colorVar(c.card)};--p:${part?Math.round(e.amt/a*100):0}%">
     <button class="check" type="button" data-toggle="${c.id}" aria-label="${done?'Uncheck':'Check off'} ${esc(c.name)}" aria-pressed="${!!done}"><span class="ring"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span></button>
     <button class="body" type="button" data-open="${c.id}">
       <span class="t"><span class="n">${esc(c.name)}</span><small class="${soon?'soon':''}">${esc(sub)}</small></span>
-      <span class="a num">${isCash(c)?'≈ ':''}${part?`${fmt(worth(c,e.amt))}<span class="of"> / ${fmt(worth(c,a))}</span>`:fmt(worth(c,a))}</span>
+      <span class="a num">${c.cash?'≈ ':''}${part?`${fmt(worth(c,e.amt))}<span class="of"> / ${fmt(worth(c,a))}</span>`:fmt(worth(c,a))}</span>
     </button>
     ${ibtn(c)}</div></li>`;
 }
 function logYm(){ return ymStr(UI.ty,UI.tm); }
 function toggleCredit(id){
-  const c=creditOf(id), y=UI.ty, m=UI.tm, k=`${c.id}|${period(c,y,m).key}`, e=S.log[k], a=e?.face ?? amountAt(c,y,m);
+  const c=CREDITS.find(x=>x.id===id), y=UI.ty, m=UI.tm, k=`${c.id}|${periodKey(c,y,m)}`, e=S.log[k], a=e?.face ?? amtAt(c,y,m);
   if(e && e.amt>=a){ delete S.log[k]; save(['log',k], DEL); }
   else { S.log[k]=mkEntry(c,a,a,logYm()); save(['log',k], S.log[k]); }
   render();
@@ -719,35 +758,28 @@ function ibtn(c){ return `<button class="ibtn" type="button" data-info="${c.id}"
 function infoBlock(c){ return `<div class="how"><p>${esc(c.how)}</p>${c.info?`<ul>${c.info.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}</div>`; }
 function bindInfo(){ view.querySelectorAll('[data-info]').forEach(b=>b.addEventListener('click',()=>openInfo(b.dataset.info))); }
 function openInfo(id){
-  const c=creditOf(id), a=amountAt(c,today.y,today.m), vd=calc.verifiedDate(c,RUNS), src=safeUrl(c.sourceUrl);
+  const c=CREDITS.find(x=>x.id===id), a=amtAt(c,today.y,today.m);
   scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="in-t">
     <div class="grab"></div>
     <div><div class="eyebrow" style="color:${colorVar(c.card)}">${esc(CARD[c.card].issuer+' '+CARD[c.card].name)} · ${FREQ[c.freq]}</div><h3 id="in-t">${esc(c.name)}</h3>
-      <div class="num" style="color:var(--fg2);margin-top:2px">${fmt(a)}${isCash(c)?` Bilt Cash, counted as ${fmt(worth(c,a))}`:''} · ${esc(creditSub(c))}</div></div>
+      <div class="num" style="color:var(--fg2);margin-top:2px">${fmt(a)}${c.cash?` Bilt Cash, counted as ${fmt(worth(c,a))}`:''} · ${esc(creditSub(c))}</div></div>
     ${infoBlock(c)}
-    <div class="vinfo">
-      <div>Source: ${src?`<a href="${esc(src)}" target="_blank" rel="noopener">${esc(new URL(src).hostname)}</a>`:'no link yet'}</div>
-      <div>${vd?`Verified ${esc(fmtIso(vd))}`:'Not verified yet'}${isStale(c)?' <span class="pill warn vb">Verify</span>':''}</div>
-      ${c.changeNote?`<div>Last change: ${esc(c.changeNote)}</div>`:''}
-    </div>
-    <div class="btns"><button class="btn" type="button" id="in-verify">Mark verified</button><button class="btn" type="button" id="in-edit">Edit</button><button class="btn primary" type="button" id="in-close">Done</button></div>
+    <div class="btns"><button class="btn primary" type="button" id="in-close">Done</button></div>
   </div>`;
   showModal();
   const close=hideModal;
   document.getElementById('in-close').onclick=close;
-  document.getElementById('in-verify').onclick=()=>{ markVerified([c.id]); close(); render(); };
-  document.getElementById('in-edit').onclick=()=>openEditForm(c.id);
   scrim.onclick=ev=>{ if(ev.target===scrim) close(); };
 }
 
 /* ---------- partial-amount sheet ---------- */
 function openSheet(id){
-  const c=creditOf(id), y=UI.ty, m=UI.tm, k=`${c.id}|${period(c,y,m).key}`, e=S.log[k], a=e?.face ?? amountAt(c,y,m);
+  const c=CREDITS.find(x=>x.id===id), y=UI.ty, m=UI.tm, k=`${c.id}|${periodKey(c,y,m)}`, e=S.log[k], a=e?.face ?? amtAt(c,y,m);
   scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
     <div class="grab"></div>
     <div><div class="eyebrow" style="color:${colorVar(c.card)}">${esc(CARD[c.card].issuer+' '+CARD[c.card].name)} · ${FREQ[c.freq]}</div><h3 id="sh-t">${esc(c.name)}</h3></div>
     ${infoBlock(c)}
-    <div class="amtin"><label for="sh-amt">Amount used</label><input id="sh-amt" type="number" inputmode="decimal" min="0" max="${a}" step="0.01" value="${e?e.amt:''}" placeholder="0"><span class="num" style="color:var(--fg3)">of ${fmt(a)}${isCash(c)?' Bilt Cash':''}</span></div>
+    <div class="amtin"><label for="sh-amt">Amount used</label><input id="sh-amt" type="number" inputmode="decimal" min="0" max="${a}" step="0.01" value="${e?e.amt:''}" placeholder="0"><span class="num" style="color:var(--fg3)">of ${fmt(a)}${c.cash?' Bilt Cash':''}</span></div>
     <div class="btns"><button class="btn" type="button" id="sh-full">Used all ${fmt(a)}</button>${e?'<button class="btn" type="button" id="sh-clear">Clear</button>':''}</div>
     <div class="btns"><button class="btn" type="button" id="sh-cancel">Cancel</button><button class="btn primary" type="button" id="sh-save">Save</button></div>
   </div>`;
@@ -763,215 +795,6 @@ function openSheet(id){
   document.getElementById('sh-cancel').onclick=close;
   document.getElementById('sh-save').onclick=()=>commit(parseFloat(inp.value)||0);
   scrim.onclick=ev=>{ if(ev.target===scrim) close(); };
-}
-
-/* ---------- credit catalog: verify, review queue, edit and add forms ----------
-   Every change to a credit goes through the review queue (users/{uid}/proposals). Your own edits
-   create manual proposals; the automated checker (a later task) will create bot proposals. Nothing
-   is applied until you tap Approve. The rules for applying them live in catalog.js. */
-const credRef = id => doc(userRef,'credits',id);
-const propRef = id => doc(userRef,'proposals',id);
-const safeUrl = u => (typeof u==='string' && /^https?:\/\//i.test(u)) ? u : null;
-function commit(batch, what){ batch.commit().catch(err=>{ console.error(err); showError(`Couldn’t ${what} (${err.code||err.message}).`); }); }
-function markVerified(ids){
-  const batch=writeBatch(db), now=new Date().toISOString();
-  for(const id of ids) batch.update(credRef(id), {lastVerified:TODAY_ISO, updatedAt:now});
-  commit(batch,'save the verified date');
-  toast(ids.length===1?'Marked verified':`Marked ${ids.length} credits verified`);
-}
-function addProposals(ps){
-  const batch=writeBatch(db);
-  for(const q of ps) batch.set(doc(collection(userRef,'proposals')), q);
-  commit(batch,'save the proposal');
-}
-const takenIds = () => [...Object.keys(CAT), ...PROPS.filter(q=>q.status==='pending' && q.kind==='added').map(q=>q.targetId)];
-const pendingProps = () => PROPS.filter(q=>q.status==='pending');
-// Pending proposals grouped for review: an end + add pair is one item, approved or rejected together
-function reviewItems(){
-  const items=[], seen=new Set(), pend=pendingProps();
-  for(const q of pend){
-    if(!q.group){ items.push([q]); continue; }
-    if(seen.has(q.group)) continue;
-    seen.add(q.group);
-    items.push(pend.filter(x=>x.group===q.group).sort((a,b)=>a.kind==='ended'?-1:b.kind==='ended'?1:0));
-  }
-  return items;
-}
-function itemProblem(ps){ try{ planApproval(ps, CAT, TODAY_ISO); return null; }catch(e){ return e.message; } }
-function approve(ps){
-  let plan; try{ plan=planApproval(ps, CAT, TODAY_ISO); }catch(e){ showError(e.message); return; }
-  const batch=writeBatch(db), now=new Date().toISOString();
-  for(const st of plan){
-    if(st.create) batch.set(credRef(st.id), st.write); else batch.update(credRef(st.id), st.write);
-    batch.update(propRef(st.proposal.id), {status:'approved', decidedAt:now, applied:st.applied});
-    const old=st.proposal.proposed?.replaces;
-    if(st.create && old && S.off[old]){ S.off[st.id]=true; save(['off',st.id], true); }   // a replacement keeps the old credit's on/off switch
-  }
-  commit(batch,'apply the change');
-  toast('Approved');
-}
-function reject(ps){
-  const batch=writeBatch(db), now=new Date().toISOString();
-  for(const q of ps) batch.update(propRef(q.id), {status:'rejected', decidedAt:now});
-  commit(batch,'save the decision');
-  toast('Rejected');
-}
-// "Approve all": pending amount changes only, each checked against the catalog as the earlier ones leave it
-const bulkProps = () => pendingProps().filter(q=>q.kind==='amount_change' && !q.group && !problemWith(q, CAT));
-function approveAll(){
-  let cat={...CAT}, n=0; const batch=writeBatch(db), now=new Date().toISOString();
-  for(const q of bulkProps()){
-    try{
-      const [st]=planApproval([q], cat, TODAY_ISO);
-      batch.update(credRef(st.id), st.write); batch.update(propRef(q.id), {status:'approved', decidedAt:now, applied:st.applied});
-      cat={...cat, [st.id]:{...cat[st.id], ...st.write}}; n++;
-    }catch(e){}
-  }
-  if(n) commit(batch,'apply the changes');
-  toast(`Approved ${n} amount change${n===1?'':'s'}`);
-}
-
-const PER = {month:'a month', half:'every six months', year:'a year'};
-const KIND = {amount_change:'Amount change', added:'New credit', ended:'Credit ends', other:'Details change'};
-const FIELD = {name:'Name', how:'How it works', info:'Details', sourceUrl:'Source link'};
-const show = v => Array.isArray(v) ? (v.length ? v.join(' · ') : '—') : (v==null || v==='' ? '—' : String(v));
-function diffRows(q){
-  const live=CAT[q.targetId], P=q.proposed||{}, out=[];
-  const row=(label, from, to)=>out.push(`<div class="brow"><span class="l">${esc(label)}</span><span>${from!=null?`<span class="of">${esc(from)} → </span>`:''}${esc(to)}</span></div>`);
-  if(q.kind==='amount_change') row('Amount', `${fmt(calc.amountOn(live,q.effectiveFrom))}`, `${fmt(P.amount)}${isCash(live)?' Bilt Cash':''} ${PER[live.freq]}`);
-  if(q.kind==='added'){ row('Amount', null, `${fmt(P.amount)}${P.valuation==='biltCash'?' Bilt Cash':''} ${PER[P.freq]}`); row('Resets', null, P.resetOn==='anniversary'?'On the card anniversary':'On the calendar'); }
-  if(q.kind==='ended') row('Ends', live?.activeTo?fmtIso(live.activeTo):'Ongoing', fmtIso(P.activeTo));
-  if(q.kind==='other') for(const k of Object.keys(P)) row(FIELD[k]||k, show(live?.[k]), show(P[k]));
-  return out.join('');
-}
-function reviewItem(ps){
-  const q=ps[ps.length-1], first=ps[0], why=itemProblem(ps), pair=ps.length>1;
-  const target=CAT[first.targetId] || {name:first.proposed?.name || first.targetId, card:first.proposed?.card};
-  const src=safeUrl(q.source?.url);
-  return `<section class="panel" data-item="${esc(ps.map(x=>x.id).join(','))}">
-    <div class="ptitle"><h2>${esc(target.name)}</h2><span class="sub">${esc(CARD[target.card]?.name||'')}</span></div>
-    <div class="ptitle" style="padding-top:0"><span class="sub" style="text-align:left">${pair?'Frequency or reset change: ends this credit and adds a new one':esc(KIND[q.kind])} · from ${esc(fmtIso(q.effectiveFrom))} · ${q.createdBy==='bot'?'automatic check':'your edit'}</span></div>
-    <div class="breakdown">${pair?ps.map(diffRows).join(''):diffRows(q)}</div>
-    ${q.note?`<div class="perk"><small>${esc(q.note)}</small></div>`:''}
-    ${src?`<div class="perk"><small><a href="${esc(src)}" target="_blank" rel="noopener">Source: ${esc(new URL(src).hostname)}</a>${q.source.excerpt?` · “${esc(q.source.excerpt)}”`:''}</small></div>`:''}
-    ${why?`<div class="perk"><p class="err">${esc(why)}</p></div>`:''}
-    <div class="btns" style="padding:4px 16px 14px"><button class="btn" type="button" data-reject>Reject</button><button class="btn primary" type="button" data-approve ${why?'disabled':''}>Approve</button></div>
-  </section>`;
-}
-function runLine(run, cardId){
-  const r=run.cards?.[cardId], when=fmtIso((run.finishedAt||run.startedAt||'').slice(0,10));
-  if(!r) return `not checked, ${when}`;
-  const why=r.reason?` (${r.reason})`:'';
-  if(r.status==='couldnt_check') return `couldn’t check${why}, ${when}`;   // never shown as "no changes"
-  if(r.status==='partial') return `partly checked${why}, ${when}`;
-  const found=PROPS.some(q=>q.runId===run.id && (CAT[q.targetId]?.card===cardId || q.proposed?.card===cardId));
-  return `${found?'checked, changes found':'checked, no changes'}, ${when}`;
-}
-function histRow(q){
-  const name=CAT[q.targetId]?.name || q.proposed?.name || q.targetId;
-  return `<li><div class="perk">${q.status==='approved'?'Approved':q.status==='rejected'?'Rejected':'Superseded'} ${q.decidedAt?esc(fmtIso(q.decidedAt.slice(0,10))):''} · ${esc(name)}<small>${esc(KIND[q.kind]||q.kind)}${q.kind==='amount_change'?`: ${fmt(q.proposed?.amount)} from ${esc(fmtIso(q.effectiveFrom))}`:''}${q.note?` · ${esc(q.note)}`:''}</small></div></li>`;
-}
-function renderReview(){
-  const items=reviewItems(), bulk=bulkProps(), run=RUNS[0];
-  const decided=PROPS.filter(q=>q.status!=='pending').sort((a,b)=>(b.decidedAt||'').localeCompare(a.decidedAt||''));
-  view.innerHTML=`
-    <button class="back" type="button" id="back">‹ All cards</button>
-    ${run?`<section class="panel"><div class="ptitle"><h2>Last automatic check</h2></div>
-      <ul class="rows">${CARDS.map(c=>`<li><div class="perk">${esc(c.name)}: ${esc(runLine(run,c.id))}</div></li>`).join('')}</ul></section>`:''}
-    ${items.length?items.map(reviewItem).join(''):`<div class="panel"><div class="empty">Nothing waiting for review.</div></div>`}
-    ${bulk.length?`<section class="panel"><div class="field">${UI.confirmAll
-        ?`<div>Approve ${bulk.length} amount change${bulk.length===1?'':'s'}?<small>Each is applied as shown above.</small></div><div class="btns"><button class="btn" type="button" id="all-no">Cancel</button><button class="btn primary" type="button" id="all-yes">Approve ${bulk.length}</button></div>`
-        :`<div>Approve all amount changes<small>${bulk.length} waiting. Other kinds need their own tap.</small></div><button class="btn" type="button" id="all">Approve all</button>`}</div></section>`:''}
-    ${decided.length?`<section class="panel"><div class="field"><div>History<small>${decided.length} decided</small></div><button class="btn" type="button" id="hist" aria-expanded="${!!UI.histOpen}">${UI.histOpen?'Hide':'Show'}</button></div>
-      ${UI.histOpen?`<ul class="rows" style="border-top:1px solid var(--line)">${decided.map(histRow).join('')}</ul>`:''}</section>`:''}`;
-  document.getElementById('back').addEventListener('click',()=>{ UI.review=false; UI.confirmAll=false; render(); });
-  view.querySelectorAll('[data-item]').forEach(sec=>{
-    const ps=()=>sec.dataset.item.split(',').map(id=>PROPS.find(q=>q.id===id)).filter(Boolean);
-    sec.querySelector('[data-approve]').addEventListener('click',()=>{ approve(ps()); render(); });
-    sec.querySelector('[data-reject]').addEventListener('click',()=>{ reject(ps()); render(); });
-  });
-  const on=(id,f)=>{ const b=document.getElementById(id); if(b) b.addEventListener('click',f); };
-  on('all',()=>{ UI.confirmAll=true; render(); });
-  on('all-no',()=>{ UI.confirmAll=false; render(); });
-  on('all-yes',()=>{ UI.confirmAll=false; approveAll(); render(); });
-  on('hist',()=>{ UI.histOpen=!UI.histOpen; render(); });
-}
-
-const freqOpts = v => Object.entries(FREQ).map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${l}</option>`).join('');
-const resetOpts = v => [['calendar','On the calendar'],['anniversary','On the card anniversary']].map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${l}</option>`).join('');
-const lines = t => t.split('\n').map(x=>x.trim()).filter(Boolean);
-function formSheet(id, eyebrow, title, fields, submitLabel, onSubmit, color){
-  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="${id}-t">
-    <div class="grab"></div>
-    <div><div class="eyebrow" style="color:${color}">${esc(eyebrow)}</div><h3 id="${id}-t">${esc(title)}</h3></div>
-    <p class="note" style="margin:0">This goes to Review changes on the Cards tab. Nothing changes until you approve it there.</p>
-    <form class="form" id="${id}-form" novalidate>${fields}
-      <p class="err" id="${id}-err" hidden></p>
-      <div class="btns"><button class="btn" type="button" id="${id}-cancel">Cancel</button><button class="btn primary" type="submit">${submitLabel}</button></div>
-    </form>
-  </div>`;
-  showModal();
-  const err=document.getElementById(id+'-err');
-  document.getElementById(id+'-cancel').onclick=hideModal;
-  scrim.onclick=ev=>{ if(ev.target===scrim) hideModal(); };
-  document.getElementById(id+'-form').addEventListener('submit', ev=>{
-    ev.preventDefault();
-    const f=n=>document.getElementById(`${id}-${n}`);
-    try{ const msg=onSubmit(f); if(msg){ err.textContent=msg; err.hidden=false; } }
-    catch(e){ err.textContent=e.message; err.hidden=false; }
-  });
-}
-function openEditForm(cid){
-  const c=CAT[cid], card=CARD[c.card], next=period(c,today.y,today.m).next;
-  formSheet('ed', `${card.issuer} ${card.name} · Edit credit`, c.name, `
-    <label for="ed-name">Name</label><input class="search" id="ed-name" maxlength="120" value="${esc(c.name)}">
-    <label for="ed-amount">Amount</label><div class="amtin"><span>$</span><input id="ed-amount" type="number" inputmode="decimal" min="0" step="0.01" value="${calc.amountOn(c,next)}"></div>
-    <label for="ed-from">A new amount or frequency starts on</label><input class="search" id="ed-from" type="date" value="${next}">
-    <label for="ed-freq">How often</label><select id="ed-freq">${freqOpts(c.freq)}</select>
-    ${card.anniv?`<label for="ed-reset">Resets</label><select id="ed-reset">${resetOpts(c.resetOn)}</select>`:''}
-    <label for="ed-how">How it works</label><textarea class="search" id="ed-how" rows="3">${esc(c.how||'')}</textarea>
-    <label for="ed-info">Details, one per line</label><textarea class="search" id="ed-info" rows="5">${esc((c.info||[]).join('\n'))}</textarea>
-    <label for="ed-src">Source link</label><input class="search" id="ed-src" type="url" inputmode="url" placeholder="https://" value="${esc(c.sourceUrl||'')}">
-    <label for="ed-end">Ends on (leave empty if ongoing)</label><input class="search" id="ed-end" type="date" value="${c.activeTo||''}">
-    <label for="ed-note">Note</label><input class="search" id="ed-note" maxlength="300" placeholder="What changed, and where you saw it">`,
-    'Send to review', f=>{
-      const src=f('src').value.trim();
-      if(src && !safeUrl(src)) return 'The source link has to start with https://';
-      const amount=f('amount').value===''?undefined:Number(f('amount').value);
-      if(amount!==undefined && !(amount>=0)) return 'The amount isn’t a valid number.';
-      const ps=proposalsFromEdit(c, {name:f('name').value.trim()||c.name, amount, amountFrom:f('from').value, freq:f('freq').value,
-        resetOn:f('reset')?.value, how:f('how').value.trim(), info:lines(f('info').value), sourceUrl:src||null, activeTo:f('end').value||null, note:f('note').value.trim()}, takenIds());
-      if(!ps.length) return 'Nothing changed.';
-      const bad=ps.filter(q=>!q.group).map(q=>problemWith(q, CAT)).find(Boolean); if(bad) return bad;
-      addProposals(ps); hideModal(); render();
-      toast(`${ps.length} change${ps.length===1?'':'s'} sent to Review changes`);
-    }, colorVar(c.card));
-}
-function openAddForm(cardId){
-  const card=CARD[cardId];
-  formSheet('ad', `${card.issuer} ${card.name} · Add credit`, 'New credit', `
-    <label for="ad-name">Name</label><input class="search" id="ad-name" maxlength="120" placeholder="For example, Hotel credit">
-    <label for="ad-amount">Amount</label><div class="amtin"><span>$</span><input id="ad-amount" type="number" inputmode="decimal" min="0" step="0.01"></div>
-    <label for="ad-freq">How often</label><select id="ad-freq">${freqOpts('month')}</select>
-    ${card.anniv?`<label for="ad-reset">Resets</label><select id="ad-reset">${resetOpts('calendar')}</select>`:''}
-    ${cardId==='bilt'?`<label for="ad-val">Paid as</label><select id="ad-val"><option value="dollars">Dollars</option><option value="biltCash">Bilt Cash</option></select>`:''}
-    <label for="ad-from">Starts on</label><input class="search" id="ad-from" type="date" value="${TODAY_ISO}">
-    <label for="ad-how">How it works</label><textarea class="search" id="ad-how" rows="3"></textarea>
-    <label for="ad-info">Details, one per line</label><textarea class="search" id="ad-info" rows="4"></textarea>
-    <label for="ad-src">Source link</label><input class="search" id="ad-src" type="url" inputmode="url" placeholder="https://">
-    <label for="ad-note">Note</label><input class="search" id="ad-note" maxlength="300" placeholder="Where you saw it">`,
-    'Send to review', f=>{
-      const name=f('name').value.trim(), amount=Number(f('amount').value), src=f('src').value.trim();
-      if(!name) return 'Give the credit a name.';
-      if(f('amount').value==='' || !(amount>=0)) return 'Enter the amount.';
-      if(src && !safeUrl(src)) return 'The source link has to start with https://';
-      const q=makeProposal({kind:'added', targetId:idForNewCredit(cardId, name, takenIds()), effectiveFrom:f('from').value, note:f('note').value.trim(),
-        source:{url:src, checkedAt:TODAY_ISO, excerpt:''},
-        proposed:{card:cardId, name, freq:f('freq').value, resetOn:f('reset')?.value||'calendar', amount, valuation:f('val')?.value||'dollars', how:f('how').value.trim(), info:lines(f('info').value)}});
-      const bad=problemWith(q, CAT); if(bad) return bad;
-      addProposals([q]); hideModal(); render();
-      toast('New credit sent to Review changes');
-    }, colorVar(cardId));
 }
 
 /* ---------- tab 3: best card guide ---------- */
@@ -1000,11 +823,10 @@ function grow(g){
 /* ---------- tab 4: value ---------- */
 function renderValue(){
   const Y=UI.vy;
-  const u=calc.usedInYear(S.log, Y, creditOf, ctx());
-  const per=CARDS.map(c=>({c, used:u.byCard[c.id]||0, fee:feeFor(c,Y), poss:calc.cardPossible(CREDIT_LIST,c.id,Y,ctx())}));
+  const per=CARDS.map(c=>{ const used=usedInYear(c.id,Y), fee=feeFor(c,Y), poss=CREDITS.filter(x=>x.card===c.id).reduce((t,x)=>t+possibleByCredit(x,Y),0); return {c,used,fee,poss}; });
   const U=per.reduce((t,p)=>t+p.used,0), F=per.reduce((t,p)=>t+p.fee,0), net=U-F;
   // monthly stacks
-  const monthly=u.byMonth.map(b=>({csr:b.csr||0, gold:b.gold||0, bilt:b.bilt||0}));
+  const monthly=Array.from({length:12},(_,i)=>{ const ym=ymStr(Y,i+1); const by={csr:0,gold:0,bilt:0}; for(const [k,e] of Object.entries(S.log)){ if(e.ym!==ym || by[e.card]==null) continue; by[e.card]+=worth(creditOf(k.split('|')[0]),e.amt); } return by; });
   const mtot=monthly.map(b=>b.csr+b.gold+b.bilt);
   const rawMax=Math.max(50,...mtot);
   const step = rawMax>600?200: rawMax>300?100:50;
@@ -1026,7 +848,7 @@ function renderValue(){
       <div class="ptitle" style="padding-top:0"><span class="sub" style="text-align:left">Bilt Cash counted at ${Math.round((S.biltRate??0.5)*100)}¢ per dollar. Change it on the Palladium card page.</span></div>
       <ul class="rows">${per.map(p=>{
         const scale=Math.max(p.fee,p.used,p.poss)||1, gap=p.used-p.fee, open=UI.open[p.c.id];
-        const credits=CREDIT_LIST.filter(x=>x.card===p.c.id).map(x=>({x,u:u.byCredit[x.id]||0,p:calc.possibleForYear(x,Y,ctx())})).filter(r=>r.p>0||r.u>0).sort((a,b)=>b.u-a.u);
+        const credits=CREDITS.filter(x=>x.card===p.c.id).map(x=>({x,u:usedByCredit(x,Y),p:possibleByCredit(x,Y)})).filter(r=>r.p>0||r.u>0).sort((a,b)=>b.u-a.u);
         return `<li><button class="vcard" type="button" data-vc="${p.c.id}" aria-expanded="${!!open}" style="--c:${colorVar(p.c.id)}">
           <div class="top"><span class="name"><span class="dot" style="background:${colorVar(p.c.id)}"></span>${esc(p.c.name)}</span>
             ${gap>=0?`<span class="pill good">✓ Ahead <span class="num">${fmt(gap)}</span></span>`:`<span class="pill warn">▲ <span class="num">${fmt(-gap)}</span> to go</span>`}</div>
@@ -1112,18 +934,13 @@ if(navigator.maxTouchPoints > 0){
 // The click the label forwards to its switch would bubble back up to the button and run its handlers a
 // second time. Stop it at the switch; the tick has already played by the time listeners run.
 function onHapticSwitch(e){ e.stopPropagation(); }
-// With the tap landing on the label, WebKit activates the label rather than the button, so a submit
-// button wouldn't submit its form. Submit it here, after the tap, unless the browser already did
-// (Chrome on touch devices does), so a form is never submitted twice.
-let lastSubmitted=null;
-document.addEventListener('submit', e=>{ lastSubmitted=e.target; }, true);
+// With the tap landing on the label, the label is what the browser "activates", so a submit button
+// wouldn't submit its form on its own. Do that here (the click handlers have already run).
 document.addEventListener('click', e=>{
   const l=e.target;
   if(!(l instanceof HTMLLabelElement) || !l.classList.contains('hap') || e.defaultPrevented) return;
-  const b=l.parentElement, form=b.form;
-  if(b.type!=='submit' || !form) return;
-  lastSubmitted=null;
-  setTimeout(()=>{ if(lastSubmitted!==form && form.isConnected) form.requestSubmit(b); }, 0);
+  const b=l.parentElement;
+  if(b.type==='submit' && b.form) b.form.requestSubmit(b);
 });
 
 function download(name, text, type){
@@ -1134,12 +951,8 @@ function download(name, text, type){
 const isoDay = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
 
 /* ---------- backup: export / import ---------- */
-// Everything worth keeping: settings, check-offs, the credit catalog and the review queue
-const catalogCopy = () => Object.fromEntries(CREDIT_LIST.map(({id,...c})=>[id,c]));
-const proposalsCopy = () => Object.fromEntries(PROPS.map(({id,...p})=>[id,p]));
-const fullCopy = () => ({...pick(S), schemaVersion:SCHEMA_VERSION, credits:catalogCopy(), proposals:proposalsCopy()});
 function exportBackup(){
-  const b={app:'card-credits', version:2, exportedAt:new Date().toISOString(), data:fullCopy()};
+  const b={app:'card-credits', version:1, exportedAt:new Date().toISOString(), data:pick(S)};
   download(`card-credits-backup-${isoDay(new Date())}.json`, JSON.stringify(b,null,2), 'application/json');
   toast('Backup downloaded');
 }
@@ -1159,11 +972,7 @@ function parseBackup(text){
     if(!card || !(e.amt>=0) || !/^\d{4}-\d{2}$/.test(e.ym)) throw new Error('The backup has a damaged check-off');
     out.log[k]={amt:Number(e.amt), face:Number(e.face ?? e.amt), card, ym:e.ym};
   }
-  // version 2 backups also carry the catalog and proposals; version 1 backups don't
-  const credits={}, proposals={}, ids=CARDS.map(x=>x.id);
-  if(obj(d.credits)) for(const [id,c] of Object.entries(d.credits)){ const cc=cleanCredit(id,c,ids); if(cc) credits[id]=cc; }
-  if(obj(d.proposals)) for(const [id,q] of Object.entries(d.proposals)){ const pp=cleanProposal(q); if(pp && /^[A-Za-z0-9_-]{1,64}$/.test(id)) proposals[id]=pp; }
-  return {data:out, credits, proposals, at:j.exportedAt ? new Date(j.exportedAt) : null};
+  return {data:out, at:j.exportedAt ? new Date(j.exportedAt) : null};
 }
 document.getElementById('importFile').addEventListener('change', async ev=>{
   const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
@@ -1171,16 +980,14 @@ document.getElementById('importFile').addEventListener('change', async ev=>{
 });
 function confirmImport(b){
   const n=Object.keys(b.data.log).length, cur=Object.keys(S.log).length, missing=Object.keys(b.data.log).filter(k=>!(k in S.log));
-  const newCredits=Object.keys(b.credits).filter(id=>!CAT[id]), newProps=Object.keys(b.proposals).filter(id=>!PROPS.some(q=>q.id===id));
-  const nc=Object.keys(b.credits).length, np=Object.keys(b.proposals).length, extra=newCredits.length+newProps.length;
   const when = b.at && !isNaN(b.at) ? ` from ${fmtDate(b.at)}${b.at.getFullYear()===today.y?', '+b.at.getFullYear():''}` : '';
   scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="im-t">
     <div class="grab"></div>
     <div><div class="eyebrow">Import backup</div><h3 id="im-t">Add or replace?</h3></div>
-    <div class="how"><p>This backup${when} has ${n} check-off${n===1?'':'s'}, ${missing.length} of them not in the app now.${nc||np?` It also has ${nc} credit${nc===1?'':'s'} and ${np} proposal${np===1?'':'s'}; ${extra} of them aren’t in the app.`:''}</p>
+    <div class="how"><p>This backup${when} has ${n} check-off${n===1?'':'s'}, ${missing.length} of them not in the app now.</p>
       <ul><li><b>Add missing check-offs</b> keeps everything you have and adds ${missing.length===1?'the one that’s missing':`the ${missing.length} that are missing`}. Settings don’t change.</li>
-      <li><b>Replace everything</b> swaps your ${cur} check-off${cur===1?'':'s'} and settings for the backup${nc||np?', and writes its credits and proposals over yours with the same IDs (no credit is ever deleted)':''}. A copy of your current data is saved first.</li></ul></div>
-    <div class="btns"><button class="btn primary" type="button" id="im-add" ${missing.length||extra?'':'disabled'}>Add missing check-offs</button></div>
+      <li><b>Replace everything</b> swaps your ${cur} check-off${cur===1?'':'s'} and settings for the backup. A copy of your current data is saved first.</li></ul></div>
+    <div class="btns"><button class="btn primary" type="button" id="im-add" ${missing.length?'':'disabled'}>Add missing check-offs</button></div>
     <div class="btns"><button class="btn" type="button" id="im-cancel">Cancel</button><button class="btn" type="button" id="im-go" style="flex:1">Replace everything</button></div>
   </div>`;
   showModal();
@@ -1188,29 +995,28 @@ function confirmImport(b){
   scrim.onclick=ev=>{ if(ev.target===scrim) hideModal(); };
   document.getElementById('im-add').onclick=()=>{
     for(const k of missing){ S.log[k]=b.data.log[k]; save(['log',k], S.log[k]); }
-    if(extra){ const batch=writeBatch(db); newCredits.forEach(id=>batch.set(credRef(id), b.credits[id])); newProps.forEach(id=>batch.set(propRef(id), b.proposals[id])); commit(batch,'import the credits and proposals'); }
-    hideModal(); render(); toast(`Added ${missing.length} check-off${missing.length===1?'':'s'}${extra?` and ${extra} catalog item${extra===1?'':'s'}`:''}`);
+    hideModal(); render(); toast(`Added ${missing.length} check-off${missing.length===1?'':'s'}`);
   };
   document.getElementById('im-go').onclick=()=>{
     const stamp=new Date().toISOString().slice(0,19).replace(/:/g,'-');
-    setDoc(doc(userRef,'snapshots',`before-import-${stamp}`), {...fullCopy(), takenAt:serverTimestamp()})
+    setDoc(doc(userRef,'snapshots',`before-import-${stamp}`), {...pick(S), takenAt:serverTimestamp()})
       .catch(err=>{ console.error(err); showError(`Couldn’t save the copy of your data before importing (${err.code||err.message}).`); });
-    const next={...b.data, schemaVersion:SCHEMA_VERSION, ...(S.lastSnapshot?{lastSnapshot:S.lastSnapshot}:{})};
+    // keep every field the app doesn't manage (lastSnapshot, and schemaVersion left by the credit catalog)
+    const keep=Object.fromEntries(Object.entries(S).filter(([k])=>!DATA_KEYS.includes(k)));
+    const next={...keep, ...b.data};
     S={...next}; save(null, next);
-    if(nc||np){ const batch=writeBatch(db); Object.entries(b.credits).forEach(([id,c])=>batch.set(credRef(id), c)); Object.entries(b.proposals).forEach(([id,q])=>batch.set(propRef(id), q)); commit(batch,'import the credits and proposals'); }
     hideModal(); render(); toast('Backup imported');
   };
 }
 
 /* ---------- monthly snapshot ----------
-   The first time the app opens each month it copies the whole data doc, the credit catalog and the
-   review queue to users/{uid}/snapshots/YYYY-MM. */
+   The first time the app opens each month it copies the whole data doc to users/{uid}/snapshots/YYYY-MM. */
 function monthlySnapshot(){
   const ym=ymStr(today.y,today.m);
   if(snapTaken || S.lastSnapshot===ym) return;
   snapTaken=true; S.lastSnapshot=ym;
   const batch=writeBatch(db);
-  batch.set(doc(userRef,'snapshots',ym), {...fullCopy(), takenAt:serverTimestamp()});
+  batch.set(doc(userRef,'snapshots',ym), {...pick(S), takenAt:serverTimestamp()});
   batch.update(userRef, {lastSnapshot:ym});
   batch.commit().catch(err=>{ console.error('Monthly snapshot failed', err); showError(`Couldn’t save this month’s automatic snapshot (${err.code||err.message}). It will try again next time.`); });
 }
@@ -1229,12 +1035,13 @@ function icsFold(line){ // lines may be at most 75 bytes; continuations start wi
   for(const ch of line){ const b=enc.encode(ch).length; if(n+b>75){ out+='\r\n '; n=1; } out+=ch; n+=b; }
   return out;
 }
-function creditLine({c, amount}){
-  return `• ${CARD[c.card].name}: ${c.name}, ${fmt(amount)}${isCash(c)?' Bilt Cash':''}${c.activeTo?` (through ${monthYear(c.activeTo)})`:''}`;
+function creditLine(c){
+  const a=amtAt(c,today.y,today.m);
+  return `• ${CARD[c.card].name}: ${c.name}, ${fmt(a)}${c.cash?' Bilt Cash':''}${c.end?` (through ${MONTHS[Number(c.end.slice(5))-1]} ${c.end.slice(0,4)})`:''}`;
 }
 function downloadCalendar(){
   const d=new Date(), stamp=d.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z', url=location.href.split('#')[0];
-  const live=calc.calendarCredits(CREDIT_LIST, TODAY_ISO, ctx());
+  const live=CREDITS.filter(c=>isOn(c) && (!c.end || c.end>=ymStr(today.y,today.m)));
   const next25 = new Date(d.getFullYear(), d.getMonth() + (d.getDate()>25?1:0), 25);
   const nextHalf = d.getMonth()<5 ? new Date(d.getFullYear(),5,1) : d.getMonth()<11 ? new Date(d.getFullYear(),11,1) : new Date(d.getFullYear()+1,5,1);
   const event=(uid,start,rule,title,body)=>{
@@ -1245,9 +1052,9 @@ function downloadCalendar(){
   };
   const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Card Credits//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Card Credits',
     ...event('monthly-credits', next25, 'FREQ=MONTHLY;BYMONTHDAY=25', 'Use this month’s card credits',
-      `Monthly credits reset on the 1st:\n${live.month.map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
+      `Monthly credits reset on the 1st:\n${live.filter(c=>c.freq==='month').map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
     ...event('half-year-credits', nextHalf, 'FREQ=YEARLY;BYMONTH=6,12;BYMONTHDAY=1', 'Six-month card credits reset soon',
-      `These reset on July 1 and January 1:\n${live.half.map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
+      `These reset on July 1 and January 1:\n${live.filter(c=>c.freq==='half').map(creditLine).join('\n')}\n\nCheck them off in Card Credits.`),
     'END:VCALENDAR'];
   download('card-credits-reminders.ics', lines.map(icsFold).join('\r\n')+'\r\n', 'text/calendar');
   toast('Calendar file downloaded');
@@ -1282,26 +1089,10 @@ function refresh(){
   if(!scrim.hidden || (a && view.contains(a) && /^(INPUT|SELECT)$/.test(a.tagName))) return;
   render();
 }
-let started=false, catLoaded=false, catFromServer=false, migrating=false;
-const loadError = err=>{ console.error(err); showMessage(err.code==='permission-denied' ? 'Firestore refused access. Check that the security rules have your user ID (see the README).' : 'Couldn’t load your data. Try again in a moment.'); };
 function subscribe(uid){
   userRef=doc(db,'users',uid); loadOutbox();
   let last='', stale=false;   // stale: data changed while our own writes were pending, re-render once they settle
-  subs.push(onSnapshot(collection(userRef,'credits'), {includeMetadataChanges:true}, snap=>{
-    CAT=Object.fromEntries(snap.docs.map(d=>[d.id,{id:d.id, ...d.data()}]));
-    CREDIT_LIST=Object.values(CAT).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0) || a.id.localeCompare(b.id));
-    catLoaded=true; catFromServer = catFromServer || !snap.metadata.fromCache;
-    catalogChanged();
-  }, loadError));
-  subs.push(onSnapshot(collection(userRef,'proposals'), snap=>{
-    PROPS=snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-    catalogChanged();
-  }, loadError));
-  subs.push(onSnapshot(query(collection(userRef,'checkRuns'), orderBy('startedAt','desc'), limit(6)), snap=>{
-    RUNS=snap.docs.map(d=>({id:d.id, ...d.data()}));
-    catalogChanged();
-  }, loadError));
-  subs.push(onSnapshot(userRef, {includeMetadataChanges:true}, snap=>{
+  unsub=onSnapshot(userRef, {includeMetadataChanges:true}, snap=>{
     sync.pending=snap.metadata.hasPendingWrites; sync.fromCache=snap.metadata.fromCache;
     if(!snap.exists()){
       if(snap.metadata.fromCache) return;   // could be a new device that's offline; wait for the server before creating anything
@@ -1315,50 +1106,24 @@ function subscribe(uid){
     }
     if(first){
       outbox.forEach(send);      // replay anything left over from an earlier session
-      maybeMigrate(); maybeStart();
-    } else if(started){
+      ensureFees(); monthlySnapshot(); nav.hidden=false;
+      restoreUi() || setTab(tabs.includes((location.hash||'').slice(1)) ? location.hash.slice(1) : 'tracker');
+    } else {
       stale = stale || changed;
       if(stale && !snap.metadata.hasPendingWrites){ stale=false; refresh(); }
     }
     updateSync();
-  }, loadError));
+  }, err=>{ console.error(err); showMessage(err.code==='permission-denied' ? 'Firestore refused access. Check that the security rules have your user ID (see the README).' : 'Couldn’t load your data. Try again in a moment.'); });
 }
-function catalogChanged(){ maybeMigrate(); if(started) refresh(); else maybeStart(); }
-// Show the app once the user doc and the credit catalog are both loaded
-function maybeStart(){
-  if(started || !S || !catLoaded) return;
-  if(!CREDIT_LIST.length){
-    showMessage(navigator.onLine===false ? 'Connect to the internet once to finish updating your credit list.' : 'Updating your credit list…');
-    return;
-  }
-  started=true;
-  ensureFees(); monthlySnapshot(); nav.hidden=false;
-  restoreUi() || setTab(tabs.includes((location.hash||'').slice(1)) ? location.hash.slice(1) : 'tracker');
-  updateSync();
-}
-/* First run of this version (or any seed credit missing): move the credit list into Firestore.
-   The transaction needs a connection; it waits until the catalog has been read from the server. */
-function maybeMigrate(){
-  if(!S || !catFromServer || migrating) return;
-  if(S.schemaVersion===SCHEMA_VERSION && SEED_CREDITS.every(c=>CAT[c.id])) return;
-  migrating=true;
-  migrateToCatalog({doc, runTransaction}, db, USER.uid)
-    .then(r=>{ if(r.migrated) console.info('Credit catalog ready', r); })
-    .catch(err=>{ console.error('Catalog migration failed', err); migrating=false; if(!started) showMessage('Couldn’t finish updating your credit list. It will try again when you’re online.'); });
-}
-addEventListener('online', ()=>{ if(USER && S && !started) maybeStart(); });
-function unsubscribeAll(){ subs.forEach(f=>f()); subs=[]; }
 async function doSignOut(){
-  unsubscribeAll();
+  if(unsub){ unsub(); unsub=null; }
   await signOut(auth);
   try{ await terminate(db); await clearIndexedDbPersistence(db); }catch(e){} // remove this device's offline copy
   location.reload();
 }
 onAuthStateChanged(auth, user=>{
-  unsubscribeAll();
-  USER=user; S=null; snapTaken=false; started=false; catLoaded=false; catFromServer=false; migrating=false;
-  CAT={}; CREDIT_LIST=[]; PROPS=[]; RUNS=[];
-  hideModalIfOpen(); updateSync();
+  if(unsub){ unsub(); unsub=null; }
+  USER=user; S=null; snapTaken=false; hideModalIfOpen(); updateSync();
   if(!user){ showSignIn(); return; }
   nav.hidden=true; showMessage('Loading your credits…'); subscribe(user.uid);
 });

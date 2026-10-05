@@ -2,7 +2,7 @@
 
 My personal tracker for statement credits on Chase Sapphire Reserve, Amex Gold and Bilt Palladium. It's a single static page hosted on GitHub Pages. Firebase handles sign-in and storage, and it works offline once you've signed in.
 
-The app is `index.html`. Two small modules hold its logic: `calc.js` (the period and amount rules every total comes from) and `catalog.js` (the credit catalog, its migration and the review queue). `catalog-seed.js` is the original hardcoded credit list, used once to seed the catalog.
+`prototype.html` is the approved design, kept for reference. The production app is `index.html`.
 
 ## One-time setup
 
@@ -36,7 +36,7 @@ While you're in **Settings**, open **Authorized domains** and add `jon1095.githu
 3. Choose **Start in production mode** and click **Create**.
 4. Open the **Rules** tab, at the top of the Firestore Database page next to **Data**.
 5. Delete everything in the editor and paste the contents of [`firestore.rules`](firestore.rules).
-6. Replace every `YOUR_USER_ID` with the User UID from step 2 (it appears twice). Keep the quotes.
+6. Replace `YOUR_USER_ID` with the User UID from step 2. Keep the quotes.
 7. Click **Publish**.
 
 These rules only let a signed-in user whose ID matches yours read or write, and only under `users/<your ID>`. Everything else is denied.
@@ -75,15 +75,11 @@ Everything is in Firestore under your user ID:
 
 | Path | What's in it |
 | --- | --- |
-| `users/{uid}` | Settings (credits turned off, anniversary months, rent, Bilt Cash value), annual fees per card per year, the check-off log, and `schemaVersion: 2` |
-| `users/{uid}/credits/{creditId}` | The credit catalog: one document per credit (see below) |
-| `users/{uid}/proposals/{id}` | The review queue: proposed changes to credits, pending or decided |
-| `users/{uid}/checkRuns/{runId}` | Reserved for the automated checker's results (not built yet) |
-| `users/{uid}/snapshots/YYYY-MM` | Automatic monthly copy of everything above, made the first time the app opens each month |
+| `users/{uid}` | Settings (credits turned off, anniversary months, rent, Bilt Cash value), annual fees per card per year, and the check-off log |
+| `users/{uid}/snapshots/YYYY-MM` | Automatic monthly copy, made the first time the app opens each month |
 | `users/{uid}/snapshots/before-import-…` | Copy saved automatically just before an import replaces your data |
-| `users/{uid}/snapshots/pre-catalog-…` | Copy of the user document made once, just before the catalog migration |
 
-Each check-off stores its own copy of what it was worth: `amt` (dollars used), `face` (the credit's full amount that period) and `card`. Past months and the Value tab read these stored numbers. If a credit's amount changes later, your history doesn't change.
+Each check-off stores its own copy of what it was worth: `amt` (dollars used), `face` (the credit's full amount that period) and `card`. Past months and the Value tab read these stored numbers. If you edit a credit's amount in `index.html` later, your history doesn't change.
 
 Every change is also kept on the device (in localStorage) until the server confirms it, and re-sent each time the app starts. Firestore has its own offline queue, but on iPhone the SDK can shut itself down while the app is still open (see below). The device copy means a change can't be lost that way.
 
@@ -91,85 +87,23 @@ Annual fees are stored per year. The fee field on each card page sets this year'
 
 Bilt Cash is the one exception. The Value tab still counts it at the rate you choose on the Palladium page, as the prototype did, so changing that rate revalues past Bilt Cash too. The Bilt Cash dollar amounts themselves are stored with each check-off.
 
-## Credit catalog
+### Left over from the credit catalog
 
-Each credit is a document in `users/{uid}/credits/{creditId}`. Its fields:
+For a short time the credits lived in Firestore, with a review queue. That version was rolled back, and the credits are back in `index.html`. Its data was left in place so the rollback can be undone. The app doesn't read it, and it never changes or removes it, including when an import replaces everything:
 
-- **What it is:** `card`, `name`, `freq` (`month` | `half` | `year`), `resetOn` (`calendar` | `anniversary`), `valuation` (`dollars` | `biltCash`), `how`, `info[]` and `sortOrder`.
-- **Amounts and dates:** `amounts: [{amount, from: "YYYY-MM-DD"}]`, oldest first; `activeFrom`; and `activeTo` (`null` while ongoing).
-- **Upkeep:** `sourceUrl`, `lastVerified`, `changeNote` and `updatedAt`.
+| Path | What it is |
+| --- | --- |
+| `users/{uid}` field `schemaVersion` | Set to `2` when the catalog version first opened |
+| `users/{uid}/credits` | One document per credit |
+| `users/{uid}/proposals` | Credit changes from the review queue, if you made any |
+| `users/{uid}/checkRuns` | Reserved for an automated checker that never ran, so it's probably not there |
+| `users/{uid}/snapshots/pre-catalog-…` | Copy of your data taken just before the catalog version moved credits into Firestore |
 
-The IDs are the same as before, so every existing check-off still matches its credit.
+It takes a few KB and costs nothing. To delete it later, open the Firebase console, go to **Firestore Database → Data**, and open `users`, then your user ID:
 
-The app reads credits only from Firestore, including the offline copy. Credits are never deleted, only ended by setting `activeTo`.
-
-The rules, all in `calc.js`:
-
-- A period counts toward "possible" if it overlaps the credit's active dates.
-- A period's amount is the one in effect on the later of the period start and `activeFrom`. So a change dated mid-period applies from the next period.
-- Yearly credits, including the anniversary ones, count once per calendar year, as before.
-- Check-offs keep their own `amt` and `face`. Editing or ending a credit never changes a past check-off or a past year's totals.
-
-`activeFrom: 2000-01-01` on the seeded credits means "before tracking started", so every past year's totals match the old app.
-
-### Changing a credit: the review queue
-
-Nothing changes a credit without your approval:
-
-- **Edit:** in a credit's ⓘ sheet, **Edit** opens a form. **Add credit** on each card page adds a new one. Both send *proposals* to **Review changes**, at the top of the Cards tab, which shows a count when anything is waiting.
-- **Review:** each item shows the credit, card, current vs proposed, effective date, source link and note, with **Approve** and **Reject**. Approving writes the change, the proposal's new status and an exact record of what was written (`applied`) in one batch. It also sets the credit's `lastVerified` and `sourceUrl` from the proposal. Rejecting only records the decision. Decided items go under **History**.
-- **Out of date:** if a credit changed after a proposal was made, the proposal shows as out of date and can only be rejected.
-- **Approve all:** approves pending *amount* changes only, after an on-page confirm.
-- **Frequency or reset changes** end the old credit the day before and add a new one with a new ID (`<oldId>-YYYYMM`). Check-offs already logged keep their period keys. The two are reviewed and approved together, and the new credit keeps the old one's on/off switch.
-- A new amount must be dated after the credit's latest amount entry.
-
-The handlers that apply changes live in `catalog.js` (`HANDLERS`), one per domain. Only `credits` exists today; a later domain such as rewards only adds a handler.
-
-### Verify
-
-A credit needs checking when it hasn't been verified in 90 days. Its verified date is the later of `lastVerified` and the latest automated check run that matched it.
-
-- Card pages show a **Verify** badge on those credits, and the Cards tab shows a count per card.
-- A credit's ⓘ sheet shows its source link, verified date and last change note, with **Mark verified**.
-- **Verify all** on a card page marks all of its credits verified today.
-
-### Room for the automated checker
-
-A later task adds a monthly checker. It will sign in as its own Firebase user, read the catalog, and write pending proposals (`createdBy: "bot"`) plus one `checkRuns` document per run:
-
-```json
-{ "startedAt": "…", "finishedAt": "…",
-  "cards": { "gold": { "status": "couldnt_check", "reason": "page didn't load", "pages": [], "matched": [] } } }
-```
-
-`status` is `checked`, `couldnt_check` or `partial`. The review screen shows the latest run, one line per card, and "couldn't check" never shows as "no changes".
-
-Its security rules are already in `firestore.rules`, commented out between `BOT START` and `BOT END`. Once enabled, the checker can:
-
-- read your credits and nothing else;
-- create, but never update or delete, pending bot proposals with a checked shape and size limits;
-- create check runs.
-
-## Rolling back
-
-The catalog only *adds* data: the new collections, a pre-catalog snapshot, and `schemaVersion` on your user document. Nothing that the previous version uses was renamed, moved or removed.
-
-1. **Revert** the pull request's merge commit on GitHub. The previous app ignores `credits`, `proposals` and `checkRuns` and keeps working with your check-offs and settings as they are.
-2. **Restore, only if ever needed:** `users/{uid}/snapshots/pre-catalog-<timestamp>` is a full copy of your user document from just before the migration. Copy its fields back into `users/{uid}` in the Firestore console's **Data** tab.
-
-If you later go forward again, the migration runs once more. It only creates credits that are missing and never overwrites existing ones.
-
-## Tests
-
-Install the dev tools once with `npm install`. They're only for the tests; the app itself has no build step.
-
-| Command | What it runs | Needs |
-| --- | --- | --- |
-| `npm test` | Period and amount rules, parity with the old app's totals, the proposal handlers and the migration seed | Node 20+ |
-| `npm run test:emulator` | Migration and security rules against the Firestore emulator | Java 21 (`brew install openjdk@21`) |
-| `npm run test:e2e` | The real app in Chrome against the Auth and Firestore emulators: migration, Verify, review queue, end + add, Add credit, export/import, the old app on migrated data, reload-on-resume | Java 21 and Google Chrome (or set `CHROME_PATH`) |
-
-The emulators run locally with a `demo-` project, so the tests cost nothing and never touch your real data. To run the migration and end-to-end tests on a copy of a real backup, set `BACKUP_FILE=/path/to/backup.json`. Never commit that file; `.gitignore` already excludes backup file names.
+- **`credits` and `proposals` (and `checkRuns`, if it's there):** click the collection, open its **⋮** menu, choose **Delete collection**, and type its name to confirm.
+- **The `pre-catalog-…` snapshot:** open `snapshots`, click that document, then **⋮ → Delete document**. Keep the monthly `YYYY-MM` and `before-import-…` snapshots.
+- **`schemaVersion`:** in your user document, hover over the field and click its trash icon. Don't delete any other field.
 
 ## Sync status
 
@@ -189,15 +123,14 @@ Now, if `pagehide` has fired, the app reloads the next time it's shown. It comes
 
 ## Backups
 
-- **Export backup** on the Cards tab downloads a JSON file with all your settings, check-offs, the credit catalog and the review queue. Older backups without the catalog still import.
+- **Export backup** on the Cards tab downloads a JSON file with all your settings and check-offs.
 - **Import backup** gives you two choices:
-  - **Add missing check-offs** adds only the check-offs, credits and proposals the app doesn't already have. It keeps everything else, including your settings. Use this to bring in check-offs from another device.
-  - **Replace everything** swaps your settings and check-offs for the backup, and writes the backup's credits and proposals over yours with the same IDs. No credit is ever deleted. It saves a copy of your current data first.
+  - **Add missing check-offs** adds only the check-offs the app doesn't already have. It keeps everything else, including your settings. Use this to bring in check-offs from another device.
+  - **Replace everything** swaps all your data for the backup. It saves a copy of your current data first.
 - Monthly snapshots happen automatically. To restore one, open it in the Firestore console's **Data** tab and copy its fields back into `users/{uid}`.
 
 ## Making changes
 
-- Credits are changed in the app, through **Edit** / **Add credit** and the review queue, not in code. `catalog-seed.js` is only used to seed a new account.
-- Card details, earn rates and perks still live at the top of the `<script>` in `index.html` (`CARDS`, `GUIDE`).
-- `sw.js` caches the app for offline use. The page and its own scripts (`calc.js`, `catalog.js`, …) are always fetched fresh when there's signal, so updates show up together on the next open. If you add new files or change the Firebase SDK version, update the `PRECACHE` list and bump `VERSION` in `sw.js`.
+- Credits, earn rates and perks live at the top of the `<script>` in `index.html` (`CARDS`, `CREDITS`, `GUIDE`).
+- `sw.js` caches the app for offline use. The page itself is always fetched fresh when there's signal, so edits to `index.html` show up on the next open. If you add new files or change the Firebase SDK version, update the `PRECACHE` list and bump `VERSION` in `sw.js`.
 - To test locally, run `python3 -m http.server` in this folder and open http://localhost:8000. Firebase allows `localhost` by default.

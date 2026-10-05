@@ -1,11 +1,9 @@
-# dependencies and local tooling
+# local tooling
 node_modules/
-.firebase/
 *-debug.log
-firebase-debug.*.log
-ui-debug.log
 
 # personal data: backups must never be committed (this repo is public)
 Testing.json
+backup.json
 card-credits-backup-*.json
 *.backup.json
