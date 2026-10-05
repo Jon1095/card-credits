@@ -1001,7 +1001,9 @@ function confirmImport(b){
     const stamp=new Date().toISOString().slice(0,19).replace(/:/g,'-');
     setDoc(doc(userRef,'snapshots',`before-import-${stamp}`), {...pick(S), takenAt:serverTimestamp()})
       .catch(err=>{ console.error(err); showError(`Couldn’t save the copy of your data before importing (${err.code||err.message}).`); });
-    const next={...b.data, ...(S.lastSnapshot?{lastSnapshot:S.lastSnapshot}:{})};
+    // keep every field the app doesn't manage (lastSnapshot, and schemaVersion left by the credit catalog)
+    const keep=Object.fromEntries(Object.entries(S).filter(([k])=>!DATA_KEYS.includes(k)));
+    const next={...keep, ...b.data};
     S={...next}; save(null, next);
     hideModal(); render(); toast('Backup imported');
   };

@@ -1,0 +1,9 @@
+# local tooling
+node_modules/
+*-debug.log
+
+# personal data: backups must never be committed (this repo is public)
+Testing.json
+backup.json
+card-credits-backup-*.json
+*.backup.json

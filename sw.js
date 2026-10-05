@@ -1,7 +1,7 @@
 /* Offline shell for Card Credits.
    Firestore keeps the data offline; this keeps the page, card art, Firebase SDK and fonts offline.
    Bump VERSION when you change the precache list. */
-const VERSION = 'v1';
+const VERSION = 'v3';   // v2 was the credit catalog version; never reuse it
 const CACHE = `card-credits-${VERSION}`;
 const FIREBASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const PRECACHE = [

@@ -87,6 +87,24 @@ Annual fees are stored per year. The fee field on each card page sets this year'
 
 Bilt Cash is the one exception. The Value tab still counts it at the rate you choose on the Palladium page, as the prototype did, so changing that rate revalues past Bilt Cash too. The Bilt Cash dollar amounts themselves are stored with each check-off.
 
+### Left over from the credit catalog
+
+For a short time the credits lived in Firestore, with a review queue. That version was rolled back, and the credits are back in `index.html`. Its data was left in place so the rollback can be undone. The app doesn't read it, and it never changes or removes it, including when an import replaces everything:
+
+| Path | What it is |
+| --- | --- |
+| `users/{uid}` field `schemaVersion` | Set to `2` when the catalog version first opened |
+| `users/{uid}/credits` | One document per credit |
+| `users/{uid}/proposals` | Credit changes from the review queue, if you made any |
+| `users/{uid}/checkRuns` | Reserved for an automated checker that never ran, so it's probably not there |
+| `users/{uid}/snapshots/pre-catalog-…` | Copy of your data taken just before the catalog version moved credits into Firestore |
+
+It takes a few KB and costs nothing. To delete it later, open the Firebase console, go to **Firestore Database → Data**, and open `users`, then your user ID:
+
+- **`credits` and `proposals` (and `checkRuns`, if it's there):** click the collection, open its **⋮** menu, choose **Delete collection**, and type its name to confirm.
+- **The `pre-catalog-…` snapshot:** open `snapshots`, click that document, then **⋮ → Delete document**. Keep the monthly `YYYY-MM` and `before-import-…` snapshots.
+- **`schemaVersion`:** in your user document, hover over the field and click its trash icon. Don't delete any other field.
+
 ## Sync status
 
 The header shows where your changes are:
