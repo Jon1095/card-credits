@@ -1,13 +1,82 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Only your account can read or write, and only under users/<your user ID>.
-    // Replace YOUR_USER_ID with the User UID from Firebase console > Authentication > Users.
+    // Your account: full read and write on users/<your user ID> and everything under it (check-offs,
+    // settings, credits, proposals, checkRuns, snapshots). Everything else is denied by default.
+    // Replace YOUR_USER_ID (twice in this file) with the User UID from
+    // Firebase console > Authentication > Users.
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId
                          && userId == 'YOUR_USER_ID';
     }
-    // Everything else is denied by default.
+
+    // Automated benefits checker: OFF until the checker task.
+    // To turn it on, remove the leading "// " from every line between BOT START and BOT END (lines
+    // that start with "// //" stay comments), replace BOT_UID with the checker account's User UID,
+    // and publish. The checker signs in as its own Firebase user. It can read the credit catalog and
+    // create pending proposals and check-run records under your user. It can't read check-offs,
+    // settings, snapshots or proposals, and it can never update or delete anything.
+    // Rules can't measure a whole document, so the size limit is per field (string lengths and list
+    // sizes); Firestore itself caps every document at 1 MiB.
+    // ---- BOT START ----
+    // function isBot() { return request.auth != null && request.auth.uid == 'BOT_UID'; }
+    // function isOwnerPath(userId) { return userId == 'YOUR_USER_ID'; }
+    // function str(v, max) { return v is string && v.size() <= max; }
+    // function optStr(m, k, max) { return !(k in m) || m[k] == null || str(m[k], max); }
+    // function isDate(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    // // proposed / current: only credit fields, with bounded sizes
+    // function validValues(p) {
+    //   return p is map && p.size() <= 12
+    //     && p.keys().hasOnly(['amount', 'amounts', 'name', 'how', 'info', 'sourceUrl', 'card', 'freq', 'resetOn', 'valuation', 'activeTo', 'sortOrder'])
+    //     && (!('amount' in p) || (p.amount is number && p.amount >= 0 && p.amount <= 100000))
+    //     && (!('amounts' in p) || (p.amounts is list && p.amounts.size() <= 50))
+    //     && optStr(p, 'name', 120) && optStr(p, 'how', 1000) && optStr(p, 'sourceUrl', 500)
+    //     && optStr(p, 'card', 10) && optStr(p, 'freq', 10) && optStr(p, 'resetOn', 20) && optStr(p, 'valuation', 20)
+    //     && (!('info' in p) || (p.info is list && p.info.size() <= 20))
+    //     && (!('activeTo' in p) || p.activeTo == null || isDate(p.activeTo));
+    // }
+    // function validBotProposal(d) {
+    //   return d.keys().hasOnly(['domain', 'targetId', 'kind', 'current', 'proposed', 'effectiveFrom', 'source', 'note', 'createdBy', 'runId', 'status', 'createdAt', 'decidedAt', 'applied'])
+    //     && d.keys().hasAll(['domain', 'targetId', 'kind', 'proposed', 'effectiveFrom', 'source', 'createdBy', 'status', 'createdAt'])
+    //     && d.domain == 'credits'
+    //     && d.kind in ['amount_change', 'added', 'ended', 'other']
+    //     && d.createdBy == 'bot' && d.status == 'pending'
+    //     && str(d.targetId, 64) && d.targetId.matches('^[a-z0-9-]+$')
+    //     && isDate(d.effectiveFrom) && str(d.createdAt, 40)
+    //     && validValues(d.proposed)
+    //     && (!('current' in d) || d.current == null || validValues(d.current))
+    //     && d.source is map && d.source.keys().hasOnly(['url', 'checkedAt', 'excerpt'])
+    //     && str(d.source.url, 500) && optStr(d.source, 'checkedAt', 40) && optStr(d.source, 'excerpt', 2000)
+    //     && optStr(d, 'note', 1000) && optStr(d, 'runId', 64)
+    //     && (!('decidedAt' in d) || d.decidedAt == null) && (!('applied' in d) || d.applied == null);
+    // }
+    // function validCardRun(c) {
+    //   return c is map && c.keys().hasOnly(['status', 'reason', 'pages', 'matched'])
+    //     && c.status in ['checked', 'couldnt_check', 'partial']
+    //     && optStr(c, 'reason', 300)
+    //     && (!('pages' in c) || (c.pages is list && c.pages.size() <= 10))
+    //     && (!('matched' in c) || (c.matched is list && c.matched.size() <= 50));
+    // }
+    // function validRun(d) {
+    //   return d.keys().hasOnly(['startedAt', 'finishedAt', 'cards'])
+    //     && str(d.startedAt, 40) && optStr(d, 'finishedAt', 40)
+    //     && d.cards is map && d.cards.keys().hasOnly(['csr', 'gold', 'bilt'])
+    //     && (!('csr' in d.cards) || validCardRun(d.cards.csr))
+    //     && (!('gold' in d.cards) || validCardRun(d.cards.gold))
+    //     && (!('bilt' in d.cards) || validCardRun(d.cards.bilt));
+    // }
+    // match /users/{userId}/credits/{creditId} {
+    //   allow get, list: if isBot() && isOwnerPath(userId);
+    // }
+    // match /users/{userId}/proposals/{proposalId} {
+    //   allow create: if isBot() && isOwnerPath(userId) && proposalId.matches('^[A-Za-z0-9_-]{1,64}$')
+    //                 && validBotProposal(request.resource.data);
+    // }
+    // match /users/{userId}/checkRuns/{runId} {
+    //   allow create: if isBot() && isOwnerPath(userId) && runId.matches('^[A-Za-z0-9_-]{1,64}$')
+    //                 && validRun(request.resource.data);
+    // }
+    // ---- BOT END ----
   }
 }
