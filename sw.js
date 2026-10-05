@@ -1,11 +1,11 @@
 /* Offline shell for Card Credits.
    Firestore keeps the data offline; this keeps the page, card art, Firebase SDK and fonts offline.
    Bump VERSION when you change the precache list. */
-const VERSION = 'v2';
+const VERSION = 'v1';
 const CACHE = `card-credits-${VERSION}`;
 const FIREBASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const PRECACHE = [
-  './', 'index.html', 'manifest.webmanifest', 'calc.js', 'catalog.js', 'catalog-seed.js',
+  './', 'index.html', 'manifest.webmanifest',
   'img/csr.webp', 'img/gold.webp', 'img/bilt.webp',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   FIREBASE + 'firebase-app.js', FIREBASE + 'firebase-auth.js', FIREBASE + 'firebase-firestore.js'
@@ -27,25 +27,22 @@ self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET') return;
 
-  const sameOrigin = url.origin === self.location.origin;
-
-  // The page and its own scripts: network first so updates show up together, cached copy when there's
-  // no signal (or it takes over 4s). Scripts aren't served stale, so index.html and calc.js never mix versions.
-  if (req.mode === 'navigate' || (sameOrigin && url.pathname.endsWith('.js'))) {
+  // The page: network first so updates show up, cached copy when there's no signal (or it takes over 4s)
+  if (req.mode === 'navigate') {
     e.respondWith((async () => {
       const cache = await caches.open(CACHE);
-      const key = req.mode === 'navigate' ? 'index.html' : req;
       try {
         const res = await Promise.race([fetch(req), new Promise((_, rej) => setTimeout(rej, 4000))]);
-        if (res.ok) cache.put(key, res.clone());
+        if (res.ok) cache.put('index.html', res.clone());
         return res;
       } catch {
-        return (await cache.match(key)) || Response.error();
+        return (await cache.match('index.html')) || Response.error();
       }
     })());
     return;
   }
 
+  const sameOrigin = url.origin === self.location.origin;
   if (!sameOrigin && !RUNTIME_HOSTS.includes(url.hostname)) return;
 
   // Everything else: serve from cache, refresh in the background
