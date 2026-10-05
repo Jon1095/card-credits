@@ -1,0 +1,26 @@
+{
+  "app": "card-credits",
+  "version": 1,
+  "exportedAt": "2026-10-01T12:00:00.000Z",
+  "data": {
+    "off": { "csr-peloton": true, "csr-select": true },
+    "anniv": { "csr": 8, "bilt": 11 },
+    "rent": 1500,
+    "biltRate": 0.4,
+    "fees": { "csr": { "2026": 795 }, "gold": { "2026": 325 }, "bilt": { "2026": 495 } },
+    "log": {
+      "gold-uber|2026-01": { "amt": 10, "face": 10, "card": "gold", "ym": "2026-01" },
+      "gold-uber|2026-02": { "amt": 10, "face": 10, "card": "gold", "ym": "2026-02" },
+      "gold-dining|2026-01": { "amt": 6, "face": 10, "card": "gold", "ym": "2026-01" },
+      "gold-dunkin|2026-02": { "amt": 7, "face": 7, "card": "gold", "ym": "2026-02" },
+      "gold-resy|2025-H2": { "amt": 50, "face": 50, "card": "gold", "ym": "2025-11" },
+      "csr-dd-r|2026-01": { "amt": 5, "face": 5, "card": "csr", "ym": "2026-01" },
+      "csr-dd-a|2026-02": { "amt": 10, "face": 10, "card": "csr", "ym": "2026-02" },
+      "csr-lyft|2026-01": { "amt": 10, "face": 10, "card": "csr", "ym": "2026-01" },
+      "csr-edit1|2026": { "amt": 250, "face": 250, "card": "csr", "ym": "2026-03" },
+      "csr-travel|CY2025-08": { "amt": 300, "face": 300, "card": "csr", "ym": "2026-02" },
+      "bilt-hotel|2025-H2": { "amt": 200, "face": 200, "card": "bilt", "ym": "2025-12" },
+      "bilt-cash|CY2025-11": { "amt": 200, "face": 200, "card": "bilt", "ym": "2026-01" }
+    }
+  }
+}
